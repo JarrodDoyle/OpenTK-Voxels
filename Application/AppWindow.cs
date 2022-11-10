@@ -51,7 +51,7 @@ public class AppWindow : GameWindow
         var bytes = new byte[numVoxels];
         for (var i = 0; i < numVoxels; i++)
         {
-            bytes[i] = (byte)(i % 256);
+            bytes[i] = (byte) (i % 9 == 0 ? i % 256 : 0);
         }
         _raycaster.UploadVoxels(bytes);
         
