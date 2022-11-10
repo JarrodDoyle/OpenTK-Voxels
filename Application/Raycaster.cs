@@ -8,6 +8,7 @@ public class Raycaster
     private int _width;
     private int _height;
     private ShaderProgram _shaderProgram;
+    private readonly Texture _voxels;
     public readonly Texture Texture;
 
     public Raycaster(int width, int height)
@@ -19,11 +20,19 @@ public class Raycaster
             {"Resources/Shaders/raycast.compute.glsl", ShaderType.ComputeShader},
         });
 
-        var settings = new TextureSettings
+        var textureSettings = new TextureSettings
         {
             Width = _width, Height = _height, Dimensions = 2, Target = TextureTarget.Texture2D
         };
-        Texture = new Texture(settings, IntPtr.Zero);
+        Texture = new Texture(textureSettings, IntPtr.Zero);
+        
+        var voxelSettings = new TextureSettings
+        {
+            Width = 16, Height = 16, Depth = 16, Dimensions = 3, Target = TextureTarget.Texture3D,
+            PixelFormat = PixelFormat.Red, PixelType = PixelType.Byte
+        };
+        _voxels = new Texture(voxelSettings, IntPtr.Zero);
+        _voxels.BindSampler(1);
     }
 
     public void Render()
@@ -37,16 +46,10 @@ public class Raycaster
 
     public unsafe void UploadVoxels(byte[] voxels)
     {
-        // TODO: Make this versatile for more than 16x16x16
+        // TODO: Check that voxels array is the correct length        
         fixed (byte* voxelsPtr = voxels)
         {
-            var settings = new TextureSettings
-            {
-                Width = 16, Height = 16, Depth = 16, Dimensions = 3, Target = TextureTarget.Texture3D,
-                PixelFormat = PixelFormat.Red, PixelType = PixelType.Byte
-            };
-            var texture = new Texture(settings, new IntPtr(voxelsPtr));
-            texture.BindSampler(1);
+            _voxels.UpdateTexture(new IntPtr(voxelsPtr));
         }
     }
 }
