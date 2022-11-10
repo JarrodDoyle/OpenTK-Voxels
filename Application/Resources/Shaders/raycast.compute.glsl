@@ -18,7 +18,7 @@ bool voxelHit(ivec3 p) {
     p += _voxelDims / 2;
     bool hit = false;
     if (p.x >= 0 && p.x < _voxelDims.x && p.y >= 0 && p.y < _voxelDims.y && p.z >= 0 && p.z < _voxelDims.z) {
-        vec3 pos = p / vec3(16.0);
+        vec3 pos = p / vec3(_voxelDims);
         vec4 col = texture(_voxels, pos);
         if (col.r != 0) hit = true;
     }
@@ -48,7 +48,8 @@ vec4 castRay(vec3 rayPos, vec3 rayDir) {
 
     if (hit) {
         vec3 sideColor = (vec3(1.0) * (mask.x ? vec3(0.5) : mask.y ? vec3(1.0) : mask.z ? vec3(0.75) : vec3(0.0)));
-        vec4 voxelColor = texture(_voxels, vec3((mapPos + ivec3(8)) / vec3(16.0)));
+        vec4 voxelColor = texture(_voxels, vec3((mapPos + _voxelDims / 2) / vec3(_voxelDims)));
+        
         return vec4(sideColor, 1.0) * voxelColor;
     } else {
         return vec4(vec3(0.0), 1.0);
