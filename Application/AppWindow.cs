@@ -85,6 +85,8 @@ public class AppWindow : GameWindow
         base.OnRenderFrame(args);
         
         var dt = (float)RenderTime;
+        Title = $"JVoxel - FPS: {(int) (1 / dt)}";
+
         _raycaster.Render(dt);
 
         _shader.Use();
