@@ -5,16 +5,16 @@ namespace Application;
 public class Texture
 {
     // TODO: Make this dispose
+    public readonly TextureSettings Settings;
     private int _id;
-    private readonly TextureSettings _settings;
 
     public Texture(TextureSettings textureSettings, IntPtr data)
     {
-        _settings = textureSettings;
+        Settings = textureSettings;
 
-        GL.CreateTextures(_settings.Target, 1, out _id);
-        GL.TextureParameter(_id, TextureParameterName.TextureMinFilter, (int) _settings.MinFilter);
-        GL.TextureParameter(_id, TextureParameterName.TextureMagFilter, (int) _settings.MagFilter);
+        GL.CreateTextures(Settings.Target, 1, out _id);
+        GL.TextureParameter(_id, TextureParameterName.TextureMinFilter, (int) Settings.MinFilter);
+        GL.TextureParameter(_id, TextureParameterName.TextureMagFilter, (int) Settings.MagFilter);
         UpdateTexture(data);
     }
 
@@ -31,20 +31,20 @@ public class Texture
 
     public void UpdateTexture(IntPtr data)
     {
-        GL.BindTexture(_settings.Target, _id);
-        switch (_settings.Dimensions)
+        GL.BindTexture(Settings.Target, _id);
+        switch (Settings.Dimensions)
         {
             case 1:
-                GL.TexImage1D(_settings.Target, 0, _settings.InternalPixelFormat, _settings.Width, 0,
-                    _settings.PixelFormat, _settings.PixelType, data);
+                GL.TexImage1D(Settings.Target, 0, Settings.InternalPixelFormat, Settings.Width, 0,
+                    Settings.PixelFormat, Settings.PixelType, data);
                 break;
             case 2:
-                GL.TexImage2D(_settings.Target, 0, _settings.InternalPixelFormat, _settings.Width, _settings.Height, 0,
-                    _settings.PixelFormat, _settings.PixelType, data);
+                GL.TexImage2D(Settings.Target, 0, Settings.InternalPixelFormat, Settings.Width, Settings.Height, 0,
+                    Settings.PixelFormat, Settings.PixelType, data);
                 break;
             case 3:
-                GL.TexImage3D(_settings.Target, 0, _settings.InternalPixelFormat, _settings.Width, _settings.Height,
-                    _settings.Depth, 0, _settings.PixelFormat, _settings.PixelType, data);
+                GL.TexImage3D(Settings.Target, 0, Settings.InternalPixelFormat, Settings.Width, Settings.Height,
+                    Settings.Depth, 0, Settings.PixelFormat, Settings.PixelType, data);
                 break;
         }
     }
