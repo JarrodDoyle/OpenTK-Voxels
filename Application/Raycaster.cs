@@ -34,4 +34,19 @@ public class Raycaster
         GL.DispatchCompute(_width / 8, _height / 8, 1);
         GL.MemoryBarrier(MemoryBarrierFlags.TextureFetchBarrierBit);
     }
+
+    public unsafe void UploadVoxels(byte[] voxels)
+    {
+        // TODO: Make this versatile for more than 16x16x16
+        fixed (byte* voxelsPtr = voxels)
+        {
+            var settings = new TextureSettings
+            {
+                Width = 16, Height = 16, Depth = 16, Dimensions = 3, Target = TextureTarget.Texture3D,
+                PixelFormat = PixelFormat.Red, PixelType = PixelType.Byte
+            };
+            var texture = new Texture(settings, new IntPtr(voxelsPtr));
+            texture.BindSampler(1);
+        }
+    }
 }
