@@ -83,8 +83,9 @@ public class AppWindow : GameWindow
     protected override void OnRenderFrame(FrameEventArgs args)
     {
         base.OnRenderFrame(args);
-
-        _raycaster.Render();
+        
+        var dt = (float)RenderTime;
+        _raycaster.Render(dt);
 
         _shader.Use();
         _raycaster.Texture.BindSampler(0);

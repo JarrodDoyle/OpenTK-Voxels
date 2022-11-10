@@ -10,9 +10,11 @@ public class Raycaster
     private ShaderProgram _shaderProgram;
     private readonly Texture _voxels;
     public readonly Texture Texture;
+    public float _time;
 
     public Raycaster(int width, int height)
     {
+        _time = 0f;
         _width = width;
         _height = height;
         _shaderProgram = new ShaderProgram(new Dictionary<string, ShaderType>
@@ -36,9 +38,11 @@ public class Raycaster
         _voxels.BindSampler(1);
     }
 
-    public void Render()
+    public void Render(float dt)
     {
+        _time += dt;
         _shaderProgram.Use();
+        _shaderProgram.Upload("_time", _time);
         Texture.BindImage(0, 0, false, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba32f);
         GL.DispatchCompute(_width / 8, _height / 8, 1);
         GL.MemoryBarrier(MemoryBarrierFlags.TextureFetchBarrierBit);
