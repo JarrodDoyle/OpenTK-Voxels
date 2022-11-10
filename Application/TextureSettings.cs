@@ -24,4 +24,15 @@ public struct TextureSettings
         Dimensions = 2;
         Target = TextureTarget.Texture2D;
     }
+
+    public readonly int PixelCount()
+    {
+        return Dimensions switch
+        {
+            1 => Width,
+            2 => Width * Height,
+            3 => Width * Height * Depth,
+            _ => 0
+        };
+    }
 }

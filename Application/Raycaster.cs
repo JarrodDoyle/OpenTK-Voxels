@@ -25,7 +25,7 @@ public class Raycaster
             Width = _width, Height = _height, Dimensions = 2, Target = TextureTarget.Texture2D
         };
         Texture = new Texture(textureSettings, IntPtr.Zero);
-        
+
         var voxelSettings = new TextureSettings
         {
             Width = 16, Height = 16, Depth = 16, Dimensions = 3, Target = TextureTarget.Texture3D,
@@ -46,7 +46,14 @@ public class Raycaster
 
     public unsafe void UploadVoxels(byte[] voxels)
     {
-        // TODO: Check that voxels array is the correct length        
+        // Check that voxels array is the correct length
+        // TODO: This makes big assumptions that the texture is one byte per pixel!!
+        if (voxels.Length != _voxels.Settings.PixelCount())
+        {
+            var msg = $"Invalid number of voxels. Got {voxels.Length} expected {_voxels.Settings.PixelCount()}.";
+            throw new ArgumentException(msg);
+        }
+
         fixed (byte* voxelsPtr = voxels)
         {
             _voxels.UpdateTexture(new IntPtr(voxelsPtr));
