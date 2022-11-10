@@ -1,4 +1,4 @@
-using OpenTK.Graphics.OpenGL4;
+using OpenTK.Graphics.OpenGL;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
@@ -8,7 +8,11 @@ namespace Application;
 public class AppWindow : GameWindow
 {
     private HashSet<string> _driverExtensions;
-    
+    private Raycaster _raycaster;
+    private ShaderProgram _shader;
+
+    private int _vao;
+
     public AppWindow(int width, int height, string title) :
         base(GameWindowSettings.Default, new NativeWindowSettings {Size = (width, height), Title = title})
     {
@@ -22,29 +26,41 @@ public class AppWindow : GameWindow
         Console.WriteLine($"OpenGL: {GL.GetString(StringName.Version)}");
         Console.WriteLine($"GLSL: {GL.GetString(StringName.ShadingLanguageVersion)}");
         Console.WriteLine($"GPU: {GL.GetString(StringName.Renderer)}");
-        
+
         // What extension features do we have?
         var extensionCount = GL.GetInteger(GetPName.NumExtensions);
         _driverExtensions = new HashSet<string>();
         for (var i = 0; i < extensionCount; i++)
             _driverExtensions.Add(GL.GetString(StringNameIndexed.Extensions, i));
-        
+
         // If a required extension isn't found we throw an error
         CheckRequiredExtension(new Version(4, 5), "GL_ARB_direct_state_access");
         CheckRequiredExtension(new Version(4, 4), "GL_ARB_buffer_storage");
         CheckRequiredExtension(new Version(4, 3), "GL_ARB_compute_shader");
-        CheckRequiredExtension(new Version(4,2), "GL_ARB_texture_storage");
+        CheckRequiredExtension(new Version(4, 2), "GL_ARB_texture_storage");
 
+        // Set the clear colour to something cool
         GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+
+        // Load our stuff!
+        _raycaster = new Raycaster(ClientSize.X, ClientSize.Y);
+        _shader = new ShaderProgram(new Dictionary<string, ShaderType>
+        {
+            {"Resources/Shaders/screenQuad.vertex.glsl", ShaderType.VertexShader},
+            {"Resources/Shaders/screenQuad.fragment.glsl", ShaderType.FragmentShader},
+        });
+
+        _vao = GL.GenVertexArray();
+        GL.BindVertexArray(_vao);
     }
 
     protected override void OnResize(ResizeEventArgs args)
     {
         base.OnResize(args);
-        
+
         GL.Viewport(0, 0, args.Width, args.Height);
     }
-    
+
     protected override void OnUpdateFrame(FrameEventArgs args)
     {
         base.OnUpdateFrame(args);
@@ -59,8 +75,13 @@ public class AppWindow : GameWindow
     protected override void OnRenderFrame(FrameEventArgs args)
     {
         base.OnRenderFrame(args);
-        
-        GL.Clear(ClearBufferMask.ColorBufferBit);
+
+        _raycaster.Render();
+
+        _shader.Use();
+        _raycaster.Texture.BindSampler(0);
+        GL.BindVertexArray(_vao);
+        GL.DrawArrays(PrimitiveType.Triangles, 0, 6);
 
         SwapBuffers();
     }
@@ -68,6 +89,6 @@ public class AppWindow : GameWindow
     private void CheckRequiredExtension(Version minVersion, string extensionName)
     {
         if (!(APIVersion >= minVersion || _driverExtensions.Contains(extensionName)))
-            throw new NotSupportedException($"Extension {extensionName} is not available."); 
+            throw new NotSupportedException($"Extension {extensionName} is not available.");
     }
 }
