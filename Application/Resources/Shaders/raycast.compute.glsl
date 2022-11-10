@@ -4,12 +4,12 @@ layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
 layout (binding = 0, rgba32f) restrict uniform image2D _img_result;
 layout (binding = 1) uniform sampler3D _voxels;
-uniform ivec2 _resolution;
 
 void main() {
     ivec2 imgCoord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 imgSize = imageSize(_img_result);
     
-    if (imgCoord.x < _resolution.x && imgCoord.y < _resolution.y)
+    if (imgCoord.x < imgSize.x && imgCoord.y < imgSize.y)
     {
         int idx = (imgCoord.x * imgCoord.y) % (16 * 16 * 16);
         float x = (idx % 16) / 16.0;

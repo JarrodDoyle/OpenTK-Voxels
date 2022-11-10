@@ -39,7 +39,6 @@ public class Raycaster
     {
         _shaderProgram.Use();
         Texture.BindImage(0, 0, false, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba32f);
-        _shaderProgram.Upload("_resolution", new Vector2i(_width, _height));
         GL.DispatchCompute(_width / 8, _height / 8, 1);
         GL.MemoryBarrier(MemoryBarrierFlags.TextureFetchBarrierBit);
     }
