@@ -24,22 +24,7 @@ bool voxelHit(ivec3 p) {
     return hit;
 }
 
-void main() {
-    ivec2 imgCoord = ivec2(gl_GlobalInvocationID.xy);
-    ivec2 imgSize = imageSize(_img_result);
-
-    // This discards the extra pixels in cases where the image size isn't perfectly divisible by the kernel.xy
-    if (imgCoord.x >= imgSize.x || imgCoord.y >= imgSize.y) return;
-    
-    vec3 rayPos = vec3(0.0, 0.0, -20.0);
-    rayPos.xz = rotate(rayPos.xz, _time);
-    
-    vec3 screenPos = vec3(2.0 * imgCoord.xy / imgSize.xy - 1.0, 0.0);
-    vec3 cameraDir = vec3(0.0, 0.0, 1.0);
-    vec3 cameraPlane = vec3(1.0, 1.0 * imgSize.y / imgSize.x, 0.0);
-    vec3 rayDir = cameraDir + screenPos * cameraPlane;
-    rayDir.xz = rotate(rayDir.xz, _time);
-
+vec4 castRay(vec3 rayPos, vec3 rayDir) {
     bvec3 mask;
     ivec3 mapPos = ivec3(floor(rayPos));
     vec3 deltaDist = 1.0 / abs(rayDir);
@@ -63,8 +48,30 @@ void main() {
     if (hit) {
         vec3 sideColor = (vec3(1.0) * (mask.x ? vec3(0.5) : mask.y ? vec3(1.0) : mask.z ? vec3(0.75) : vec3(0.0)));
         vec4 voxelColor = texture(_voxels, vec3((mapPos + ivec3(8)) / vec3(16.0)));
-        imageStore(_img_result, imgCoord, vec4(sideColor, 1.0) * voxelColor);
+        return vec4(sideColor, 1.0) * voxelColor;
     } else {
-        imageStore(_img_result, imgCoord, vec4(vec3(0.0), 1.0));
+        return vec4(vec3(0.0), 1.0);
     }
+}
+
+void main() {
+    ivec2 imgCoord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 imgSize = imageSize(_img_result);
+
+    // This discards the extra pixels in cases where the image size isn't perfectly divisible by the kernel.xy
+    if (imgCoord.x >= imgSize.x || imgCoord.y >= imgSize.y) return;
+    
+    // Construct ray
+    vec3 rayPos = vec3(0.0, 0.0, -20.0);
+    rayPos.xz = rotate(rayPos.xz, _time);
+    
+    vec3 screenPos = vec3(2.0 * imgCoord.xy / imgSize.xy - 1.0, 0.0);
+    vec3 cameraDir = vec3(0.0, 0.0, 1.0);
+    vec3 cameraPlane = vec3(1.0, 1.0 * imgSize.y / imgSize.x, 0.0);
+    vec3 rayDir = cameraDir + screenPos * cameraPlane;
+    rayDir.xz = rotate(rayDir.xz, _time);
+
+    // Cast that ray!
+    vec4 rayColor = castRay(rayPos, rayDir);
+    imageStore(_img_result, imgCoord, rayColor);
 }
