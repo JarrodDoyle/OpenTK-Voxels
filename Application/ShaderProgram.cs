@@ -24,6 +24,11 @@ public class ShaderProgram : IDisposable
         GL.ProgramUniform2(_id, GL.GetUniformLocation(_id, name), vec2);
     }
 
+    public void Upload(string name, float value)
+    {
+        GL.ProgramUniform1(_id, GL.GetUniformLocation(_id, name), value);
+    }
+
     public void Reload()
     {
         if (_id != -1)
