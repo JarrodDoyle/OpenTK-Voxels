@@ -29,6 +29,7 @@ public class Raycaster
         var voxelSettings = new TextureSettings
         {
             Width = 16, Height = 16, Depth = 16, Dimensions = 3, Target = TextureTarget.Texture3D,
+            MinFilter = TextureMinFilter.Nearest, MagFilter = TextureMagFilter.Nearest,
             PixelFormat = PixelFormat.Red, PixelType = PixelType.UnsignedByte
         };
         _voxels = new Texture(voxelSettings, IntPtr.Zero);
