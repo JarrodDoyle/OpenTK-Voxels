@@ -27,7 +27,7 @@ public class Raycaster
         });
         
         _shaderProgram.Use();
-        _shaderProgram.Upload("_resolution", _voxelDimensions);
+        _shaderProgram.Upload("_voxelDims", _voxelDimensions);
 
         var textureSettings = new TextureSettings
         {
