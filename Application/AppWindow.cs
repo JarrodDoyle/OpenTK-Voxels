@@ -1,4 +1,5 @@
 using OpenTK.Graphics.OpenGL;
+using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
@@ -46,8 +47,9 @@ public class AppWindow : GameWindow
         GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 
         // Load our stuff!
-        _raycaster = new Raycaster(ClientSize.X, ClientSize.Y);
-        var numVoxels = 16 * 16 * 16;
+        var voxelDims = Vector3i.One * 512;
+        _raycaster = new Raycaster(ClientSize.X, ClientSize.Y, voxelDims);
+        var numVoxels = voxelDims.X * voxelDims.Y * voxelDims.Z;
         var bytes = new byte[numVoxels];
         for (var i = 0; i < numVoxels; i++)
         {

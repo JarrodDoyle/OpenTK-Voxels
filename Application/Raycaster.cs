@@ -9,11 +9,15 @@ public class Raycaster
     private int _height;
     private ShaderProgram _shaderProgram;
     private readonly Texture _voxels;
+    private readonly Vector3i _voxelDimensions;
+
     public readonly Texture Texture;
     public float _time;
 
-    public Raycaster(int width, int height)
+
+    public Raycaster(int width, int height, Vector3i voxelDimensions)
     {
+        _voxelDimensions = voxelDimensions;
         _time = 0f;
         _width = width;
         _height = height;
@@ -21,6 +25,9 @@ public class Raycaster
         {
             {"Resources/Shaders/raycast.compute.glsl", ShaderType.ComputeShader},
         });
+        
+        _shaderProgram.Use();
+        _shaderProgram.Upload("_resolution", _voxelDimensions);
 
         var textureSettings = new TextureSettings
         {
@@ -30,9 +37,15 @@ public class Raycaster
 
         var voxelSettings = new TextureSettings
         {
-            Width = 16, Height = 16, Depth = 16, Dimensions = 3, Target = TextureTarget.Texture3D,
-            MinFilter = TextureMinFilter.Nearest, MagFilter = TextureMagFilter.Nearest,
-            PixelFormat = PixelFormat.Red, PixelType = PixelType.UnsignedByte
+            Width = voxelDimensions.X,
+            Height = voxelDimensions.Y,
+            Depth = voxelDimensions.Z,
+            Dimensions = 3,
+            Target = TextureTarget.Texture3D,
+            MinFilter = TextureMinFilter.Nearest,
+            MagFilter = TextureMagFilter.Nearest,
+            PixelFormat = PixelFormat.Red,
+            PixelType = PixelType.UnsignedByte
         };
         _voxels = new Texture(voxelSettings, IntPtr.Zero);
         _voxels.BindSampler(1);
