@@ -15,8 +15,23 @@ public class Texture
         GL.CreateTextures(_settings.Target, 1, out _id);
         GL.TextureParameter(_id, TextureParameterName.TextureMinFilter, (int) _settings.MinFilter);
         GL.TextureParameter(_id, TextureParameterName.TextureMagFilter, (int) _settings.MagFilter);
-        GL.BindTexture(_settings.Target, _id);
+        UpdateTexture(data);
+    }
 
+    public void BindImage(int unit, int level, bool layered, int layer, TextureAccess textureAccess,
+        SizedInternalFormat sizedInternalFormat)
+    {
+        GL.BindImageTexture(unit, _id, level, layered, layer, textureAccess, sizedInternalFormat);
+    }
+
+    public void BindSampler(int unit)
+    {
+        GL.BindTextureUnit(unit, _id);
+    }
+
+    public void UpdateTexture(IntPtr data)
+    {
+        GL.BindTexture(_settings.Target, _id);
         switch (_settings.Dimensions)
         {
             case 1:
@@ -32,16 +47,5 @@ public class Texture
                     _settings.Depth, 0, _settings.PixelFormat, _settings.PixelType, data);
                 break;
         }
-    }
-
-    public void BindImage(int unit, int level, bool layered, int layer, TextureAccess textureAccess,
-        SizedInternalFormat sizedInternalFormat)
-    {
-        GL.BindImageTexture(unit, _id, level, layered, layer, textureAccess, sizedInternalFormat);
-    }
-
-    public void BindSampler(int unit)
-    {
-        GL.BindTextureUnit(unit, _id);
     }
 }
