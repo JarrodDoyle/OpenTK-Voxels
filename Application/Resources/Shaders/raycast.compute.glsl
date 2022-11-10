@@ -5,6 +5,7 @@ layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 layout (binding = 0, rgba32f) restrict uniform image2D _img_result;
 layout (binding = 1) uniform sampler3D _voxels;
 
+uniform ivec3 _voxelDims;
 uniform float _time;
 
 vec2 rotate(vec2 v, float a) {
@@ -14,9 +15,9 @@ vec2 rotate(vec2 v, float a) {
 }
 
 bool voxelHit(ivec3 p) {
-    p += ivec3(8);
+    p += _voxelDims / 2;
     bool hit = false;
-    if (p.x >= 0 && p.x < 16 && p.y >= 0 && p.y < 16 && p.z >= 0 && p.z < 16) {
+    if (p.x >= 0 && p.x < _voxelDims.x && p.y >= 0 && p.y < _voxelDims.y && p.z >= 0 && p.z < _voxelDims.z) {
         vec3 pos = p / vec3(16.0);
         vec4 col = texture(_voxels, pos);
         if (col.r != 0) hit = true;
@@ -32,7 +33,7 @@ vec4 castRay(vec3 rayPos, vec3 rayDir) {
     vec3 sideDist = (sign(rayDir) * (vec3(mapPos) - rayPos) + (sign(rayDir) * 0.5) + 0.5) * deltaDist;
 
     bool hit = false;
-    const int maxRayDepth = 128;
+    const int maxRayDepth = 2 * _voxelDims.z;
     for (int i = 0; i < maxRayDepth; i++)
     {
         if (voxelHit(mapPos)) {
@@ -62,7 +63,7 @@ void main() {
     if (imgCoord.x >= imgSize.x || imgCoord.y >= imgSize.y) return;
     
     // Construct ray
-    vec3 rayPos = vec3(0.0, 0.0, -20.0);
+    vec3 rayPos = vec3(0.0, 0.0, -float(_voxelDims.z + 16));
     rayPos.xz = rotate(rayPos.xz, _time);
     
     vec3 screenPos = vec3(2.0 * imgCoord.xy / imgSize.xy - 1.0, 0.0);
