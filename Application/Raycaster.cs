@@ -18,7 +18,12 @@ public class Raycaster
         {
             {"Resources/Shaders/raycast.compute.glsl", ShaderType.ComputeShader},
         });
-        Texture = new Texture(_width, _height, TextureMinFilter.Linear, TextureMagFilter.Linear);
+
+        var settings = new TextureSettings
+        {
+            Width = _width, Height = _height, Dimensions = 2, Target = TextureTarget.Texture2D
+        };
+        Texture = new Texture(settings, IntPtr.Zero);
     }
 
     public void Render()

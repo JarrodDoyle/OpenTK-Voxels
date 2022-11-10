@@ -1,30 +1,41 @@
-using System.Drawing;
 using OpenTK.Graphics.OpenGL;
 
 namespace Application;
 
 public class Texture
 {
-    private int _width;
-    private int _height;
+    // TODO: Make this dispose
     private int _id;
+    private readonly TextureSettings _settings;
 
-    public Texture(int width, int height, TextureMinFilter minFilter, TextureMagFilter magFilter)
+    public Texture(TextureSettings textureSettings, IntPtr data)
     {
-        _width = width;
-        _height = height;
+        _settings = textureSettings;
 
-        const TextureTarget target = TextureTarget.Texture2D;
+        GL.CreateTextures(_settings.Target, 1, out _id);
+        GL.TextureParameter(_id, TextureParameterName.TextureMinFilter, (int) _settings.MinFilter);
+        GL.TextureParameter(_id, TextureParameterName.TextureMagFilter, (int) _settings.MagFilter);
+        GL.BindTexture(_settings.Target, _id);
 
-        GL.CreateTextures(target, 1, out _id);
-        GL.TextureParameter(_id, TextureParameterName.TextureMinFilter, (int) minFilter);
-        GL.TextureParameter(_id, TextureParameterName.TextureMagFilter, (int) magFilter);
-        GL.BindTexture(target, _id);
-        GL.TexImage2D(target, 0, PixelInternalFormat.Rgba32f, _width, _height, 0, PixelFormat.Rgba,
-            PixelType.Float, IntPtr.Zero);
+        switch (_settings.Dimensions)
+        {
+            case 1:
+                GL.TexImage1D(_settings.Target, 0, _settings.InternalPixelFormat, _settings.Width, 0,
+                    _settings.PixelFormat, _settings.PixelType, data);
+                break;
+            case 2:
+                GL.TexImage2D(_settings.Target, 0, _settings.InternalPixelFormat, _settings.Width, _settings.Height, 0,
+                    _settings.PixelFormat, _settings.PixelType, data);
+                break;
+            case 3:
+                GL.TexImage3D(_settings.Target, 0, _settings.InternalPixelFormat, _settings.Width, _settings.Height,
+                    _settings.Depth, 0, _settings.PixelFormat, _settings.PixelType, data);
+                break;
+        }
     }
-    
-    public void BindImage(int unit, int level, bool layered, int layer, TextureAccess textureAccess, SizedInternalFormat sizedInternalFormat)
+
+    public void BindImage(int unit, int level, bool layered, int layer, TextureAccess textureAccess,
+        SizedInternalFormat sizedInternalFormat)
     {
         GL.BindImageTexture(unit, _id, level, layered, layer, textureAccess, sizedInternalFormat);
     }
@@ -32,16 +43,5 @@ public class Texture
     public void BindSampler(int unit)
     {
         GL.BindTextureUnit(unit, _id);
-    }
-
-    public unsafe void SpewData(int x, int y)
-    {
-        long offset = 4 * (x + y * _width);
-        var data = new byte[4 * _width * _height];
-        fixed (byte* ptr = &data[0])
-        {
-            GL.GetTexImage(TextureTarget.Texture2D, 0, PixelFormat.Rgba, PixelType.UnsignedByte, (IntPtr)ptr);
-            Console.WriteLine(Color.FromArgb(data[offset + 3], data[offset + 0], data[offset + 1], data[offset + 2]));
-        }
     }
 }
