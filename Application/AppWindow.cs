@@ -40,18 +40,26 @@ public class AppWindow : GameWindow
         CheckRequiredExtension(new Version(4, 2), "GL_ARB_texture_storage");
 
         // Set the clear colour to something cool
+        _vao = GL.GenVertexArray();
+        GL.BindVertexArray(_vao);
+        
         GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 
         // Load our stuff!
         _raycaster = new Raycaster(ClientSize.X, ClientSize.Y);
+        var numVoxels = 16 * 16 * 16;
+        var bytes = new byte[numVoxels];
+        for (var i = 0; i < numVoxels; i++)
+        {
+            bytes[i] = (byte)(i % 256);
+        }
+        _raycaster.UploadVoxels(bytes);
+        
         _shader = new ShaderProgram(new Dictionary<string, ShaderType>
         {
             {"Resources/Shaders/screenQuad.vertex.glsl", ShaderType.VertexShader},
             {"Resources/Shaders/screenQuad.fragment.glsl", ShaderType.FragmentShader},
         });
-
-        _vao = GL.GenVertexArray();
-        GL.BindVertexArray(_vao);
     }
 
     protected override void OnResize(ResizeEventArgs args)
