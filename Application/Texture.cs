@@ -2,9 +2,8 @@ using OpenTK.Graphics.OpenGL;
 
 namespace Application;
 
-public class Texture
+public class Texture : IDisposable
 {
-    // TODO: Make this dispose
     public readonly TextureSettings Settings;
     private int _id;
 
@@ -47,5 +46,10 @@ public class Texture
                     Settings.Depth, 0, Settings.PixelFormat, Settings.PixelType, data);
                 break;
         }
+    }
+
+    public void Dispose()
+    {
+        GL.DeleteTexture(_id);
     }
 }
