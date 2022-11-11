@@ -51,11 +51,23 @@ public class AppWindow : GameWindow
         // Load our stuff!
         var voxelDims = Vector3i.One * 512;
         _raycaster = new Raycaster(ClientSize.X, ClientSize.Y, voxelDims, 512);
+
+        // Generate voxels!
+        var seed = (int) DateTime.Now.ToBinary();
+        var generator = new FastNoise("FractalFBm");
+        generator.Set("Source", new FastNoise("Simplex"));
+        generator.Set("Gain", 0.5f);
+        generator.Set("Octaves", 5);
+        generator.Set("Lacunarity", 2f);
+
         var numVoxels = voxelDims.X * voxelDims.Y * voxelDims.Z;
+        var noiseData = new float[numVoxels];
+        generator.GenUniformGrid3D(noiseData, 0, 0, 0, voxelDims.X, voxelDims.Y, voxelDims.Z, 0.005f, seed);
+        
         var bytes = new byte[numVoxels];
         for (var i = 0; i < numVoxels; i++)
         {
-            bytes[i] = (byte) (i % 9 == 0 ? i % 256 : 0);
+            bytes[i] = (byte) (noiseData[i] > 0 ? 0 : 255);
         }
 
         _raycaster.UploadVoxels(bytes);
