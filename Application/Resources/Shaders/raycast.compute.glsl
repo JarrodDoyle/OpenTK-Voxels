@@ -15,6 +15,13 @@ uniform ivec3 _voxelDims;
 uniform int _maxRayDepth;
 uniform float _time;
 
+struct HitInfo {
+    bool hit;
+    vec3 pos;
+    vec4 color;
+    bvec3 mask;
+};
+
 vec4 voxelColor;
 
 bool voxelHit(ivec3 p) {
@@ -23,23 +30,26 @@ bool voxelHit(ivec3 p) {
     return voxelColor.r != 0;
 }
 
-vec4 castRay(vec3 rayPos, vec3 rayDir) {
+bool castRay(vec3 rayPos, vec3 rayDir, out HitInfo hitInfo) {
+    hitInfo.hit = false;
+
     bvec3 mask;
     ivec3 mapPos = ivec3(floor(rayPos));
     vec3 deltaDist = 1.0 / abs(rayDir);
     ivec3 rayStep = ivec3(sign(rayDir));
     vec3 sideDist = (rayStep * (vec3(mapPos) - rayPos) + (rayStep * 0.5) + 0.5) * deltaDist;
-
     for (int i = 0; i < _maxRayDepth; i++)
     {
         mask = lessThanEqual(sideDist.xyz, min(sideDist.yzx, sideDist.zxy));
         sideDist += vec3(mask) * deltaDist;
         mapPos += ivec3(mask) * rayStep;
-        if (voxelHit(mapPos))break;
+        if (voxelHit(mapPos)) {
+            hitInfo = HitInfo(true, mapPos + vec3(0.5), voxelColor, mask);
+            break;
+        }
     }
 
-    vec3 sideColor = mask.x ? vec3(0.5) : mask.y ? vec3(1.0) : mask.z ? vec3(0.75) : vec3(0.0);
-    return vec4(sideColor, 1.0) * voxelColor;
+    return hitInfo.hit;
 }
 
 void main() {
@@ -57,5 +67,16 @@ void main() {
     vec3 rayPos = _camera.pos;
 
     // Cast that ray!
-    imageStore(_img_result, imgCoord, castRay(rayPos, rayDir));
+    vec4 finalColor;
+    HitInfo hitInfo;
+    if (castRay(rayPos, rayDir, hitInfo)) {
+        vec3 sideColor = hitInfo.mask.x ? vec3(0.5) : hitInfo.mask.y ? vec3(1.0) : hitInfo.mask.z ? vec3(0.75) : vec3(0.0);
+        finalColor = vec4(sideColor, 1.0) * hitInfo.color;
+
+        if (castRay(hitInfo.pos, normalize(vec3(1.0, 1.0, 0.2)), hitInfo)) {
+            finalColor *= 0.25;
+        }
+    }
+
+    imageStore(_img_result, imgCoord, finalColor);
 }
