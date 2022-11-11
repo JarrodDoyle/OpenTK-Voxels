@@ -50,7 +50,7 @@ public class AppWindow : GameWindow
 
         // Load our stuff!
         var voxelDims = Vector3i.One * 512;
-        _raycaster = new Raycaster(ClientSize.X, ClientSize.Y, voxelDims);
+        _raycaster = new Raycaster(ClientSize.X, ClientSize.Y, voxelDims, 512);
         var numVoxels = voxelDims.X * voxelDims.Y * voxelDims.Z;
         var bytes = new byte[numVoxels];
         for (var i = 0; i < numVoxels; i++)

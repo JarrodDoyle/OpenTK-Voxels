@@ -10,13 +10,15 @@ public class Raycaster
     private ShaderProgram _shaderProgram;
     private readonly Texture _voxels;
     private readonly Vector3i _voxelDimensions;
+    private int _maxRayDepth;
 
     public readonly Texture Texture;
     public float _time;
 
 
-    public Raycaster(int width, int height, Vector3i voxelDimensions)
+    public Raycaster(int width, int height, Vector3i voxelDimensions, int maxRayDepth)
     {
+        _maxRayDepth = maxRayDepth;
         _voxelDimensions = voxelDimensions;
         _time = 0f;
         _width = width;
@@ -28,6 +30,7 @@ public class Raycaster
         
         _shaderProgram.Use();
         _shaderProgram.Upload("_voxelDims", _voxelDimensions);
+        _shaderProgram.Upload("_maxRayDepth", _maxRayDepth);
 
         var textureSettings = new TextureSettings
         {

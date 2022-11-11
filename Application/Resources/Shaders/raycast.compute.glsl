@@ -12,6 +12,7 @@ layout (binding = 0) uniform Camera {
 } _camera;
 
 uniform ivec3 _voxelDims;
+uniform int _maxRayDepth;
 uniform float _time;
 
 vec4 voxelColor;
@@ -29,8 +30,7 @@ vec4 castRay(vec3 rayPos, vec3 rayDir) {
     ivec3 rayStep = ivec3(sign(rayDir));
     vec3 sideDist = (rayStep * (vec3(mapPos) - rayPos) + (rayStep * 0.5) + 0.5) * deltaDist;
 
-    const int maxRayDepth = 2 * _voxelDims.z;
-    for (int i = 0; i < maxRayDepth; i++)
+    for (int i = 0; i < _maxRayDepth; i++)
     {
         mask = lessThanEqual(sideDist.xyz, min(sideDist.yzx, sideDist.zxy));
         sideDist += vec3(mask) * deltaDist;
