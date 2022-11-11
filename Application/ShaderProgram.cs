@@ -28,6 +28,11 @@ public class ShaderProgram : IDisposable
     {
         GL.ProgramUniform3(_id, GL.GetUniformLocation(_id, name), value);
     }
+    
+    public void Upload(string name, Vector3 value)
+    {
+        GL.ProgramUniform3(_id, GL.GetUniformLocation(_id, name), value);
+    }
 
     public void Upload(string name, float value)
     {

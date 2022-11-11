@@ -31,6 +31,7 @@ public class Raycaster
         _shaderProgram.Use();
         _shaderProgram.Upload("_voxelDims", _voxelDimensions);
         _shaderProgram.Upload("_maxRayDepth", _maxRayDepth);
+        _shaderProgram.Upload("_sunlightDir", new Vector3(1.0f, 1.0f, 1.0f).Normalized());
 
         var textureSettings = new TextureSettings
         {

@@ -11,6 +11,7 @@ layout (binding = 0) uniform Camera {
     vec3 pos;
 } _camera;
 
+uniform vec3 _sunlightDir;
 uniform ivec3 _voxelDims;
 uniform int _maxRayDepth;
 uniform float _time;
@@ -73,7 +74,7 @@ void main() {
         vec3 sideColor = hitInfo.mask.x ? vec3(0.5) : hitInfo.mask.y ? vec3(1.0) : hitInfo.mask.z ? vec3(0.75) : vec3(0.0);
         finalColor = vec4(sideColor, 1.0) * hitInfo.color;
 
-        if (castRay(hitInfo.pos, normalize(vec3(1.0, 1.0, 0.2)), hitInfo)) {
+        if (castRay(hitInfo.pos, _sunlightDir, hitInfo)) {
             finalColor *= 0.25;
         }
     }
