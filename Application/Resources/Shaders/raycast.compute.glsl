@@ -32,10 +32,10 @@ vec4 castRay(vec3 rayPos, vec3 rayDir) {
     const int maxRayDepth = 2 * _voxelDims.z;
     for (int i = 0; i < maxRayDepth; i++)
     {
-        if (voxelHit(mapPos))break;
         mask = lessThanEqual(sideDist.xyz, min(sideDist.yzx, sideDist.zxy));
         sideDist += vec3(mask) * deltaDist;
         mapPos += ivec3(mask) * rayStep;
+        if (voxelHit(mapPos))break;
     }
 
     vec3 sideColor = mask.x ? vec3(0.5) : mask.y ? vec3(1.0) : mask.z ? vec3(0.75) : vec3(0.0);
