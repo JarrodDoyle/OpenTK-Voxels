@@ -98,7 +98,13 @@ public class AppWindow : GameWindow
             Close();
         }
 
-        _camera.ProcessInputs((float) args.Time, input, MouseState);
+        if (MouseState.IsButtonPressed(MouseButton.Left))
+            CursorState = CursorState.Grabbed;
+        else if (MouseState.IsButtonPressed(MouseButton.Right))
+            CursorState = CursorState.Normal;
+
+        if (CursorState == CursorState.Grabbed)
+            _camera.ProcessInputs((float) args.Time, input, MouseState);
     }
 
     protected override void OnRenderFrame(FrameEventArgs args)
