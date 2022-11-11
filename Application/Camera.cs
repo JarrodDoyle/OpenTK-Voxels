@@ -12,14 +12,15 @@ public class Camera
     private float _pitch;
     private float _yaw = -MathHelper.PiOver2;
     private float _fov = MathHelper.PiOver2;
-    private float _moveSpeed;
     private bool _updated;
 
-    public Camera(Vector3 position, float aspectRatio, float moveSpeed)
+    public float MoveSpeed { get; set; } = 1f;
+    public float MouseSensitivity { get; set; } = 1f;
+
+    public Camera(Vector3 position, float aspectRatio)
     {
         Position = position;
         AspectRatio = aspectRatio;
-        _moveSpeed = moveSpeed;
         _updated = true;
     }
 
@@ -77,18 +78,25 @@ public class Camera
         _up = Vector3.Normalize(Vector3.Cross(_right, _front));
     }
 
-    public void ProcessInputs(float dt, KeyboardState keyState)
+    public void ProcessInputs(float dt, KeyboardState keyState, MouseState mouseState)
     {
+        // Mouse updates
+        var mouseDeltaX = mouseState.X - mouseState.PreviousX;
+        var mouseDeltaY = mouseState.Y - mouseState.PreviousY;
+        Yaw += mouseDeltaX * MouseSensitivity;
+        Pitch -= mouseDeltaY * MouseSensitivity;
+
+        // Keyboard updates
         var oldPos = Position;
+        if (keyState.IsKeyDown(Keys.W)) Position += _front * MoveSpeed * dt;
+        if (keyState.IsKeyDown(Keys.S)) Position -= _front * MoveSpeed * dt;
+        if (keyState.IsKeyDown(Keys.D)) Position += _right * MoveSpeed * dt;
+        if (keyState.IsKeyDown(Keys.A)) Position -= _right * MoveSpeed * dt;
+        if (keyState.IsKeyDown(Keys.Q)) Position += _up * MoveSpeed * dt;
+        if (keyState.IsKeyDown(Keys.E)) Position -= _up * MoveSpeed * dt;
 
-        if (keyState.IsKeyDown(Keys.W)) Position += _front * _moveSpeed * dt;
-        if (keyState.IsKeyDown(Keys.S)) Position -= _front * _moveSpeed * dt;
-        if (keyState.IsKeyDown(Keys.D)) Position += _right * _moveSpeed * dt;
-        if (keyState.IsKeyDown(Keys.A)) Position -= _right * _moveSpeed * dt;
-        if (keyState.IsKeyDown(Keys.Q)) Position += _up * _moveSpeed * dt;
-        if (keyState.IsKeyDown(Keys.E)) Position -= _up * _moveSpeed * dt;
-
-        if (Position != oldPos) _updated = true;
+        // Set the updated flag
+        if (Position != oldPos || mouseDeltaX != 0 || mouseDeltaY != 0) _updated = true;
     }
 
     public bool ProcessUpdate()

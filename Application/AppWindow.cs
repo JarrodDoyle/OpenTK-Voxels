@@ -76,7 +76,9 @@ public class AppWindow : GameWindow
             Offset = 0,
         });
 
-        _camera = new Camera(Vector3.One * 0.5f, ClientSize.X / (float) ClientSize.Y, 10f);
+        _camera = new Camera(Vector3.One * 0.5f, ClientSize.X / (float) ClientSize.Y);
+        _camera.MoveSpeed = 10f;
+        _camera.MouseSensitivity = 0.25f;
     }
 
     protected override void OnResize(ResizeEventArgs args)
@@ -96,7 +98,7 @@ public class AppWindow : GameWindow
             Close();
         }
 
-        _camera.ProcessInputs((float) args.Time, input);
+        _camera.ProcessInputs((float) args.Time, input, MouseState);
     }
 
     protected override void OnRenderFrame(FrameEventArgs args)
