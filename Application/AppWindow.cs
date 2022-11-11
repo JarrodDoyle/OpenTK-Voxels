@@ -98,6 +98,11 @@ public class AppWindow : GameWindow
             Close();
         }
 
+        if (input.IsKeyPressed(Keys.V))
+        {
+            VSync = (VSync == VSyncMode.On) ? VSyncMode.Off : VSyncMode.On;
+        }
+
         if (MouseState.IsButtonPressed(MouseButton.Left))
             CursorState = CursorState.Grabbed;
         else if (MouseState.IsButtonPressed(MouseButton.Right))
