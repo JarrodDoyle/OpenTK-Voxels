@@ -98,6 +98,7 @@ public class AppWindow : GameWindow
         base.OnResize(args);
 
         GL.Viewport(0, 0, args.Width, args.Height);
+        _camera.AspectRatio = args.Width / (float) args.Height;
     }
 
     protected override void OnUpdateFrame(FrameEventArgs args)
