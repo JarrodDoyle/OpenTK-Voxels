@@ -5,16 +5,16 @@ layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 layout (binding = 0, rgba32f) restrict uniform image2D _img_result;
 layout (binding = 1) uniform sampler3D _voxels;
 
+layout (binding = 0) uniform Camera {
+    mat4 projection;
+    mat4 view;
+    vec3 pos;
+} _camera;
+
 uniform ivec3 _voxelDims;
 uniform float _time;
 
 vec4 voxelColor;
-
-vec2 rotate(vec2 v, float a) {
-    float sinA = sin(a);
-    float cosA = cos(a);
-    return vec2(v.x * cosA - v.y * sinA, v.y * cosA + v.x * sinA);
-}
 
 bool voxelHit(ivec3 p) {
     p += _voxelDims / 2;
@@ -50,13 +50,11 @@ void main() {
     if (imgCoord.x >= imgSize.x || imgCoord.y >= imgSize.y) return;
 
     // Construct ray
-    vec3 rayPos = vec3(0.0, 0.0, -float(_voxelDims.z + 16));
-    rayPos.xz = rotate(rayPos.xz, _time);
-
     vec2 screenPos = vec2(2.0 * imgCoord.xy / imgSize.xy - 1.0);
-    vec2 cameraPlane = vec2(1.0, 1.0 * imgSize.y / imgSize.x);
-    vec3 rayDir = vec3(screenPos * cameraPlane, 1.0);
-    rayDir.xz = rotate(rayDir.xz, _time);
+    vec4 rayEye = _camera.projection * vec4(screenPos, -1.0, 0.0);
+    rayEye.zw = vec2(-1.0, 0.0);
+    vec3 rayDir = normalize((_camera.view * rayEye).xyz);
+    vec3 rayPos = _camera.pos;
 
     // Cast that ray!
     imageStore(_img_result, imgCoord, castRay(rayPos, rayDir));

@@ -11,6 +11,8 @@ public class AppWindow : GameWindow
     private HashSet<string> _driverExtensions;
     private Raycaster _raycaster;
     private ShaderProgram _shader;
+    private BufferObject _cameraUbo;
+    private Camera _camera;
 
     private int _vao;
 
@@ -43,7 +45,7 @@ public class AppWindow : GameWindow
         // Set the clear colour to something cool
         _vao = GL.GenVertexArray();
         GL.BindVertexArray(_vao);
-        
+
         GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 
         // Load our stuff!
@@ -55,13 +57,26 @@ public class AppWindow : GameWindow
         {
             bytes[i] = (byte) (i % 9 == 0 ? i % 256 : 0);
         }
+
         _raycaster.UploadVoxels(bytes);
-        
+
         _shader = new ShaderProgram(new Dictionary<string, ShaderType>
         {
             {"Resources/Shaders/screenQuad.vertex.glsl", ShaderType.VertexShader},
             {"Resources/Shaders/screenQuad.fragment.glsl", ShaderType.FragmentShader},
         });
+
+        _cameraUbo = new BufferObject(new BufferObjectSettings
+        {
+            Size = Vector4.SizeInBytes * 9,
+            Data = IntPtr.Zero,
+            StorageFlags = BufferStorageFlags.DynamicStorageBit,
+            RangeTarget = BufferRangeTarget.UniformBuffer,
+            Index = 0,
+            Offset = 0,
+        });
+
+        _camera = new Camera(Vector3.One * 0.5f, ClientSize.X / (float) ClientSize.Y, 10f);
     }
 
     protected override void OnResize(ResizeEventArgs args)
@@ -80,14 +95,23 @@ public class AppWindow : GameWindow
         {
             Close();
         }
+
+        _camera.ProcessInputs((float) args.Time, input);
     }
 
     protected override void OnRenderFrame(FrameEventArgs args)
     {
         base.OnRenderFrame(args);
-        
-        var dt = (float)RenderTime;
+
+        var dt = (float) RenderTime;
         Title = $"JVoxel - FPS: {(int) (1 / dt)}";
+
+        if (_camera.ProcessUpdate())
+        {
+            _cameraUbo.UploadData(0, Vector4.SizeInBytes * 4, _camera.GetProjectionMatrix().Inverted());
+            _cameraUbo.UploadData(Vector4.SizeInBytes * 4, Vector4.SizeInBytes * 4, _camera.GetViewMatrix().Inverted());
+            _cameraUbo.UploadData(Vector4.SizeInBytes * 8, Vector4.SizeInBytes, _camera.Position);
+        }
 
         _raycaster.Render(dt);
 
