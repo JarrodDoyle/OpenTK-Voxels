@@ -26,7 +26,6 @@ struct HitInfo {
 vec4 voxelColor;
 
 bool voxelHit(ivec3 p) {
-    p += _voxelDims / 2;
     voxelColor = texelFetch(_voxels, p, 0);
     return voxelColor.r != 0;
 }
@@ -65,7 +64,7 @@ void main() {
     vec4 rayEye = _camera.projection * vec4(screenPos, -1.0, 0.0);
     rayEye.zw = vec2(-1.0, 0.0);
     vec3 rayDir = normalize((_camera.view * rayEye).xyz);
-    vec3 rayPos = _camera.pos;
+    vec3 rayPos = _camera.pos + _voxelDims / 2;
 
     // Cast that ray!
     vec4 finalColor;
