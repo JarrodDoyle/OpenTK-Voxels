@@ -30,8 +30,29 @@ bool voxelHit(ivec3 p) {
     return voxelColor.r != 0;
 }
 
-vec3 hsv2rgb(vec3 c)
-{
+vec3 voxelNormal(vec3 p) {
+    vec3 normal;
+
+    // Sample a cube around the voxel at point p
+    // Samples that contain a voxel contribute to a weighted average neighbour offset
+    // Essentially the inverse of a normal!
+    int samplesize = 5;
+    vec3 sampleCenter = vec3(samplesize / 2);
+    for (int x = 0; x < samplesize; x++) {
+        for (int y = 0; y < samplesize; y++) {
+            for (int z = 0; z < samplesize; z++) {
+                vec3 offset = vec3(x, y, z) - sampleCenter;
+                if (texelFetch(_voxels, ivec3(p + offset), 0).r != 0) {
+                    normal += offset;
+                }
+            }
+        }
+    }
+
+    return -normalize(normal);
+}
+
+vec3 hsv2rgb(vec3 c) {
     vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
     vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
     return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
@@ -80,9 +101,10 @@ void main() {
         vec3 sideColor = hitInfo.mask.x ? vec3(0.5) : hitInfo.mask.y ? vec3(1.0) : hitInfo.mask.z ? vec3(0.75) : vec3(0.0);
         finalColor = vec4(sideColor, 1.0) * vec4(hsv2rgb(hitInfo.color.raa), 1.0);
 
-        if (castRay(hitInfo.pos, _sunlightDir, hitInfo)) {
-            finalColor *= 0.25;
-        }
+        float diffuse = clamp(dot(voxelNormal(hitInfo.pos), normalize(_sunlightDir)), 0.0, 1.0);
+        float shadow = castRay(hitInfo.pos, _sunlightDir, hitInfo) ? 0.25 : 1.0;
+
+        finalColor.xyz *= max(shadow * diffuse, 0.25);
     }
 
     imageStore(_img_result, imgCoord, finalColor);
