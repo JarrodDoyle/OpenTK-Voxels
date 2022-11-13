@@ -98,8 +98,7 @@ void main() {
     vec4 finalColor;
     HitInfo hitInfo;
     if (castRay(rayPos, rayDir, hitInfo)) {
-        vec3 sideColor = hitInfo.mask.x ? vec3(0.5) : hitInfo.mask.y ? vec3(1.0) : hitInfo.mask.z ? vec3(0.75) : vec3(0.0);
-        finalColor = vec4(sideColor, 1.0) * vec4(hsv2rgb(hitInfo.color.raa), 1.0);
+        finalColor = vec4(hsv2rgb(hitInfo.color.raa), 1.0);
 
         float diffuse = clamp(dot(voxelNormal(hitInfo.pos), normalize(_sunlightDir)), 0.0, 1.0);
         float shadow = castRay(hitInfo.pos, _sunlightDir, hitInfo) ? 0.25 : 1.0;
