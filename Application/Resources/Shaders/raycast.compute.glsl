@@ -30,6 +30,13 @@ bool voxelHit(ivec3 p) {
     return voxelColor.r != 0;
 }
 
+vec3 hsv2rgb(vec3 c)
+{
+    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+}
+
 bool castRay(vec3 rayPos, vec3 rayDir, out HitInfo hitInfo) {
     hitInfo.hit = false;
 
@@ -71,7 +78,7 @@ void main() {
     HitInfo hitInfo;
     if (castRay(rayPos, rayDir, hitInfo)) {
         vec3 sideColor = hitInfo.mask.x ? vec3(0.5) : hitInfo.mask.y ? vec3(1.0) : hitInfo.mask.z ? vec3(0.75) : vec3(0.0);
-        finalColor = vec4(sideColor, 1.0) * hitInfo.color;
+        finalColor = vec4(sideColor, 1.0) * vec4(hsv2rgb(hitInfo.color.raa), 1.0);
 
         if (castRay(hitInfo.pos, _sunlightDir, hitInfo)) {
             finalColor *= 0.25;
