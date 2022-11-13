@@ -1,3 +1,4 @@
+using ImGuiNET;
 using OpenTK.Graphics.OpenGL;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
@@ -13,6 +14,7 @@ public class AppWindow : GameWindow
     private ShaderProgram _shader;
     private BufferObject _cameraUbo;
     private Camera _camera;
+    private UI.UiManager _uiManager;
 
     private int _vao;
 
@@ -63,7 +65,7 @@ public class AppWindow : GameWindow
         var numVoxels = voxelDims.X * voxelDims.Y * voxelDims.Z;
         var noiseData = new float[numVoxels];
         generator.GenUniformGrid3D(noiseData, 0, 0, 0, voxelDims.X, voxelDims.Y, voxelDims.Z, 0.005f, seed);
-        
+
         var bytes = new byte[numVoxels];
         for (var i = 0; i < numVoxels; i++)
         {
@@ -91,6 +93,8 @@ public class AppWindow : GameWindow
         _camera = new Camera(Vector3.One * 0.5f, ClientSize.X / (float) ClientSize.Y);
         _camera.MoveSpeed = 10f;
         _camera.MouseSensitivity = 0.25f;
+
+        _uiManager = new UI.UiManager(ClientSize.X, ClientSize.Y);
     }
 
     protected override void OnResize(ResizeEventArgs args)
@@ -99,11 +103,17 @@ public class AppWindow : GameWindow
 
         GL.Viewport(0, 0, args.Width, args.Height);
         _camera.AspectRatio = args.Width / (float) args.Height;
+        _uiManager.Resize(args.Width, args.Height);
     }
 
     protected override void OnUpdateFrame(FrameEventArgs args)
     {
         base.OnUpdateFrame(args);
+
+        _uiManager.Update(this, (float) args.Time);
+
+        var io = ImGui.GetIO();
+        if (io.WantCaptureMouse || io.WantCaptureKeyboard) return;
 
         var input = KeyboardState;
         if (input.IsKeyDown(Keys.Escape))
@@ -122,12 +132,18 @@ public class AppWindow : GameWindow
             CursorState = CursorState.Normal;
 
         if (CursorState == CursorState.Grabbed)
+        {
             _camera.ProcessInputs((float) args.Time, input, MouseState);
+            ImGui.SetNextFrameWantCaptureKeyboard(false);
+            ImGui.SetNextFrameWantCaptureMouse(false);
+        }
     }
 
     protected override void OnRenderFrame(FrameEventArgs args)
     {
         base.OnRenderFrame(args);
+
+        GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit | ClearBufferMask.StencilBufferBit);
 
         var dt = (float) RenderTime;
         Title = $"JVoxel - FPS: {(int) (1 / dt)}";
@@ -145,6 +161,8 @@ public class AppWindow : GameWindow
         _raycaster.Texture.BindSampler(0);
         GL.BindVertexArray(_vao);
         GL.DrawArrays(PrimitiveType.Triangles, 0, 6);
+
+        _uiManager.Render();
 
         SwapBuffers();
     }
