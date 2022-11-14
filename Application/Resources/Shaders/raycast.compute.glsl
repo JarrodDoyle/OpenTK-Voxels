@@ -78,7 +78,7 @@ bool castRay(vec3 rayPos, vec3 rayDir, out HitInfo hitInfo) {
     }
 
     if (tmin > 0) {
-        rayPos += rayDir * (tmin);
+        rayPos += rayDir * (tmin - 0.0001);
     }
 
     ivec3 mapPos = ivec3(floor(rayPos));
