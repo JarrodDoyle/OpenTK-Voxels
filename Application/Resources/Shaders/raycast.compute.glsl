@@ -25,6 +25,16 @@ struct HitInfo {
 
 vec4 voxelColor;
 
+bool intersectAabb(vec3 rayPos, vec3 rayDirInv, out float tmin) {
+    vec3 t1 = (vec3(0.0) - rayPos) * rayDirInv;
+    vec3 t2 = (vec3(_voxelDims) - rayPos) * rayDirInv;
+    vec3 t_min = min(t1, t2);
+    vec3 t_max = max(t1, t2);
+    tmin = max(max(t_min.x, 0.f), max(t_min.y, t_min.z));
+    float tmax = min(t_max.x, min(t_max.y, t_max.z));
+    return tmax > tmin;
+}
+
 bool voxelHit(ivec3 p) {
     voxelColor = texelFetch(_voxels, p, 0);
     return voxelColor.r != 0;
@@ -60,8 +70,13 @@ vec3 hsv2rgb(vec3 c) {
 
 bool castRay(vec3 rayPos, vec3 rayDir, out HitInfo hitInfo) {
     hitInfo.hit = false;
-
     bvec3 mask;
+
+    float tmin;
+    if (!intersectAabb(rayPos, 1.0 / rayDir, tmin)) {
+        return false;
+    }
+
     ivec3 mapPos = ivec3(floor(rayPos));
     vec3 deltaDist = 1.0 / abs(rayDir);
     ivec3 rayStep = ivec3(sign(rayDir));
