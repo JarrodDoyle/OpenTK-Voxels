@@ -77,6 +77,10 @@ bool castRay(vec3 rayPos, vec3 rayDir, out HitInfo hitInfo) {
         return false;
     }
 
+    if (tmin > 0) {
+        rayPos += rayDir * (tmin);
+    }
+
     ivec3 mapPos = ivec3(floor(rayPos));
     vec3 deltaDist = 1.0 / abs(rayDir);
     ivec3 rayStep = ivec3(sign(rayDir));
