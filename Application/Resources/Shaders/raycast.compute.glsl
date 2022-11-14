@@ -35,6 +35,10 @@ bool intersectAabb(vec3 rayPos, vec3 rayDirInv, out float tmin) {
     return tmax > tmin;
 }
 
+bool pointInsideAabb(ivec3 p) {
+    return p.x >= 0 && p.x < _voxelDims.x && p.y >= 0 && p.y < _voxelDims.y && p.z >= 0 && p.z < _voxelDims.z;
+}
+
 bool voxelHit(ivec3 p) {
     voxelColor = texelFetch(_voxels, p, 0);
     return voxelColor.r != 0;
@@ -90,6 +94,9 @@ bool castRay(vec3 rayPos, vec3 rayDir, out HitInfo hitInfo) {
         mask = lessThanEqual(sideDist.xyz, min(sideDist.yzx, sideDist.zxy));
         sideDist += vec3(mask) * deltaDist;
         mapPos += ivec3(mask) * rayStep;
+        if (!pointInsideAabb(mapPos)) {
+            break;
+        }
         if (voxelHit(mapPos)) {
             hitInfo = HitInfo(true, mapPos + vec3(0.5), voxelColor, mask);
             break;
