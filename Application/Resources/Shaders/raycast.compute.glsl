@@ -25,7 +25,7 @@ struct HitInfo {
 
 vec4 voxelColor;
 
-bool intersectAabb(vec3 rayPos, vec3 rayDirInv, out float tmin) {
+bool rayIntersectAabb(vec3 rayPos, vec3 rayDirInv, out float tmin) {
     vec3 t1 = (vec3(0.0) - rayPos) * rayDirInv;
     vec3 t2 = (vec3(_voxelDims) - rayPos) * rayDirInv;
     vec3 t_min = min(t1, t2);
@@ -77,7 +77,7 @@ bool castRay(vec3 rayPos, vec3 rayDir, out HitInfo hitInfo) {
     bvec3 mask;
 
     float tmin;
-    if (!intersectAabb(rayPos, 1.0 / rayDir, tmin)) {
+    if (!rayIntersectAabb(rayPos, 1.0 / rayDir, tmin)) {
         return false;
     }
 
