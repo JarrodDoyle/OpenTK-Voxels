@@ -85,6 +85,7 @@ bool castRay(vec3 rayPos, vec3 rayDir, out HitInfo hitInfo) {
     if (tmin > 0) {
         rayPos += rayDir * (tmin - 0.0001);
     }
+    tmin = max(0.0, tmin);
 
     ivec3 mapPos = ivec3(floor(rayPos));
     vec3 deltaDist = 1.0 / abs(rayDir);
@@ -99,7 +100,7 @@ bool castRay(vec3 rayPos, vec3 rayDir, out HitInfo hitInfo) {
             break;
         }
         if (voxelHit(mapPos)) {
-            hitInfo = HitInfo(true, mapPos + vec3(0.5), voxelColor, mask, length(vec3(mask) * (sideDist - deltaDist)));
+            hitInfo = HitInfo(true, mapPos + vec3(0.5), voxelColor, mask, tmin + length(vec3(mask) * (sideDist - deltaDist)));
             break;
         }
     }
