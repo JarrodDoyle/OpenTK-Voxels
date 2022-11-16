@@ -29,9 +29,7 @@ public class Raycaster
         });
         
         _shaderProgram.Use();
-        _shaderProgram.Upload("_voxelDims", _voxelDimensions);
-        _shaderProgram.Upload("_maxRayDepth", _maxRayDepth);
-        _shaderProgram.Upload("_sunlightDir", new Vector3(1.0f, 1.0f, 1.0f).Normalized());
+        UploadShaderUniforms();
 
         var textureSettings = new TextureSettings
         {
@@ -59,7 +57,7 @@ public class Raycaster
     {
         _time += dt;
         _shaderProgram.Use();
-        _shaderProgram.Upload("_time", _time);
+        UploadShaderUniforms();
         Texture.BindImage(0, 0, false, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba32f);
         GL.DispatchCompute(_width / 8, _height / 8, 1);
         GL.MemoryBarrier(MemoryBarrierFlags.TextureFetchBarrierBit);
@@ -79,5 +77,13 @@ public class Raycaster
         {
             _voxels.UpdateTexture(new IntPtr(voxelsPtr));
         }
+    }
+
+    private void UploadShaderUniforms()
+    {
+        _shaderProgram.Upload("_voxelDims", _voxelDimensions);
+        _shaderProgram.Upload("_maxRayDepth", _maxRayDepth);
+        _shaderProgram.Upload("_sunlightDir", new Vector3(1.0f, 1.0f, 1.0f).Normalized());
+        _shaderProgram.Upload("_time", _time);
     }
 }
