@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using OpenTK.Graphics.OpenGL;
 using OpenTK.Mathematics;
 
@@ -7,15 +8,22 @@ public class ShaderProgram : IDisposable
 {
     private int _id = -1;
     private readonly Dictionary<string, ShaderType> _shaderDetails;
+    private readonly Dictionary<string, byte[]> _shaderHashes;
 
     public ShaderProgram(Dictionary<string, ShaderType> shaderDetails)
     {
         _shaderDetails = shaderDetails;
+        _shaderHashes = new Dictionary<string, byte[]>();
         Reload();
     }
 
     public void Use()
     {
+        if (AnyFilesUpdated())
+        {
+            Reload();
+        }
+
         GL.UseProgram(_id);
     }
 
@@ -28,7 +36,7 @@ public class ShaderProgram : IDisposable
     {
         GL.ProgramUniform3(_id, GL.GetUniformLocation(_id, name), value);
     }
-    
+
     public void Upload(string name, Vector3 value)
     {
         GL.ProgramUniform3(_id, GL.GetUniformLocation(_id, name), value);
@@ -87,6 +95,35 @@ public class ShaderProgram : IDisposable
             GL.DetachShader(_id, shaderId);
             GL.DeleteShader(shaderId);
         }
+
+        // If everything was successful, we should compute the new hashes
+        _shaderHashes.Clear();
+        var md5 = MD5.Create();
+        foreach (var (sourcePath, _) in _shaderDetails)
+        {
+            var sourceBytes = File.ReadAllBytes(sourcePath);
+            var hash = md5.ComputeHash(sourceBytes);
+            _shaderHashes.Add(sourcePath, hash);
+        }
+
+        Console.WriteLine($"Reloaded shader program. New ID {_id}.");
+    }
+
+    private bool AnyFilesUpdated()
+    {
+        var updated = false;
+        var md5 = MD5.Create();
+        foreach (var (sourcePath, _) in _shaderDetails)
+        {
+            var sourceBytes = File.ReadAllBytes(sourcePath);
+            if (!_shaderHashes[sourcePath].SequenceEqual(md5.ComputeHash(sourceBytes)))
+            {
+                updated = true;
+                break;
+            }
+        }
+
+        return updated;
     }
 
     public void Dispose()
