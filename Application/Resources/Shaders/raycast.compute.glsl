@@ -21,6 +21,7 @@ struct HitInfo {
     vec3 pos;
     vec4 color;
     bvec3 mask;
+    float d;
 };
 
 vec4 voxelColor;
@@ -98,7 +99,7 @@ bool castRay(vec3 rayPos, vec3 rayDir, out HitInfo hitInfo) {
             break;
         }
         if (voxelHit(mapPos)) {
-            hitInfo = HitInfo(true, mapPos + vec3(0.5), voxelColor, mask);
+            hitInfo = HitInfo(true, mapPos + vec3(0.5), voxelColor, mask, length(vec3(mask) * (sideDist - deltaDist)));
             break;
         }
     }
@@ -126,10 +127,12 @@ void main() {
     if (castRay(rayPos, rayDir, hitInfo)) {
         finalColor = vec4(hsv2rgb(hitInfo.color.raa), 1.0);
 
+        float fogAmount = clamp(1.0 - exp(-hitInfo.d * 0.0025), 0.0, 1.0);
         float diffuse = clamp(dot(voxelNormal(hitInfo.pos), normalize(_sunlightDir)), 0.0, 1.0);
         float shadow = castRay(hitInfo.pos, _sunlightDir, hitInfo) ? 0.25 : 1.0;
 
         finalColor.xyz *= max(shadow * diffuse, 0.25);
+        finalColor.xyz = mix(finalColor.xyz, vec3(0.5, 0.6, 0.7), fogAmount);
     }
 
     imageStore(_img_result, imgCoord, finalColor);
