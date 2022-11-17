@@ -63,15 +63,15 @@ public class AppWindow : GameWindow
         generator.Set("Lacunarity", 2f);
 
         const int numVoxels = 8 * 8 * 8;
+        var noiseData = new float[numVoxels];
+        var voxels = new uint[numVoxels];
         for (var i = 0; i < worldDims.X; i++)
         {
             for (var j = 0; j < worldDims.Y; j++)
             {
                 for (var k = 0; k < worldDims.Z; k++)
                 {
-                    var noiseData = new float[numVoxels];
                     generator.GenUniformGrid3D(noiseData, i * 8, j * 8, k * 8, 8, 8, 8, 0.005f, seed);
-                    var voxels = new uint[numVoxels];
                     for (var v = 0; v < numVoxels; v++)
                         voxels[v] = (uint) (noiseData[v] > 0 ? 0 : 1 + v % (numVoxels - 1) / 2);
                     _raycaster.UploadVoxelChunk(new Vector3i(i, j, k), voxels);
