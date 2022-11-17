@@ -51,8 +51,8 @@ public class AppWindow : GameWindow
         GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 
         // Load our stuff!
-        var voxelDims = Vector3i.One * 512;
-        _raycaster = new Raycaster(ClientSize.X, ClientSize.Y, voxelDims, 512);
+        var worldDims = Vector3i.One * 64;
+        _raycaster = new Raycaster(ClientSize.X, ClientSize.Y, worldDims, 512);
 
         // Generate voxels!
         var seed = (int) DateTime.Now.ToBinary();
@@ -62,17 +62,22 @@ public class AppWindow : GameWindow
         generator.Set("Octaves", 5);
         generator.Set("Lacunarity", 2f);
 
-        var numVoxels = voxelDims.X * voxelDims.Y * voxelDims.Z;
-        var noiseData = new float[numVoxels];
-        generator.GenUniformGrid3D(noiseData, 0, 0, 0, voxelDims.X, voxelDims.Y, voxelDims.Z, 0.005f, seed);
-
-        var bytes = new byte[numVoxels];
-        for (var i = 0; i < numVoxels; i++)
+        const int numVoxels = 8 * 8 * 8;
+        for (var i = 0; i < worldDims.X; i++)
         {
-            bytes[i] = (byte) (noiseData[i] > 0 ? 0 : 1 + i % 255);
+            for (var j = 0; j < worldDims.Y; j++)
+            {
+                for (var k = 0; k < worldDims.Z; k++)
+                {
+                    var noiseData = new float[numVoxels];
+                    generator.GenUniformGrid3D(noiseData, i * 8, j * 8, k * 8, 8, 8, 8, 0.005f, seed);
+                    var voxels = new uint[numVoxels];
+                    for (var v = 0; v < numVoxels; v++)
+                        voxels[v] = (uint) (noiseData[v] > 0 ? 0 : 1 + v % (numVoxels - 1) / 2);
+                    _raycaster.UploadVoxelChunk(new Vector3i(i, j, k), voxels);
+                }
+            }
         }
-
-        _raycaster.UploadVoxels(bytes);
 
         _shader = new ShaderProgram(new Dictionary<string, ShaderType>
         {

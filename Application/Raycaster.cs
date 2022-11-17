@@ -1,3 +1,4 @@
+using System.Drawing;
 using OpenTK.Graphics.OpenGL;
 using OpenTK.Mathematics;
 
@@ -8,13 +9,13 @@ public class Raycaster
     private int _width;
     private int _height;
     private ShaderProgram _shaderProgram;
-    private readonly Texture _voxels;
     private readonly Vector3i _voxelDimensions;
     private int _maxRayDepth;
+    private BufferObject _worldConfig;
+    private BufferObject _world;
 
     public readonly Texture Texture;
     public float _time;
-
 
     public Raycaster(int width, int height, Vector3i voxelDimensions, int maxRayDepth)
     {
@@ -25,9 +26,9 @@ public class Raycaster
         _height = height;
         _shaderProgram = new ShaderProgram(new Dictionary<string, ShaderType>
         {
-            {"Resources/Shaders/raycast.compute.glsl", ShaderType.ComputeShader},
+            {"Resources/Shaders/draw.comp.glsl", ShaderType.ComputeShader},
         });
-        
+
         _shaderProgram.Use();
         UploadShaderUniforms();
 
@@ -37,20 +38,27 @@ public class Raycaster
         };
         Texture = new Texture(textureSettings, IntPtr.Zero);
 
-        var voxelSettings = new TextureSettings
+        _worldConfig = new BufferObject(new BufferObjectSettings
         {
-            Width = voxelDimensions.X,
-            Height = voxelDimensions.Y,
-            Depth = voxelDimensions.Z,
-            Dimensions = 3,
-            Target = TextureTarget.Texture3D,
-            MinFilter = TextureMinFilter.Nearest,
-            MagFilter = TextureMagFilter.Nearest,
-            PixelFormat = PixelFormat.Red,
-            PixelType = PixelType.UnsignedByte
-        };
-        _voxels = new Texture(voxelSettings, IntPtr.Zero);
-        _voxels.BindSampler(1);
+            Size = Vector3i.SizeInBytes + sizeof(int),
+            Data = IntPtr.Zero,
+            StorageFlags = BufferStorageFlags.DynamicStorageBit,
+            RangeTarget = BufferRangeTarget.ShaderStorageBuffer,
+            Index = 0,
+            Offset = 0,
+        });
+        _worldConfig.UploadData(0, Vector3i.SizeInBytes, _voxelDimensions);
+        _worldConfig.UploadData(Vector3i.SizeInBytes, sizeof(int), _maxRayDepth);
+
+        _world = new BufferObject(new BufferObjectSettings
+        {
+            Size = sizeof(uint) * 512 * _voxelDimensions.X * _voxelDimensions.Y * _voxelDimensions.Z,
+            Data = IntPtr.Zero,
+            StorageFlags = BufferStorageFlags.DynamicStorageBit,
+            RangeTarget = BufferRangeTarget.ShaderStorageBuffer,
+            Index = 1,
+            Offset = 0,
+        });
     }
 
     public void Render(float dt)
@@ -63,20 +71,13 @@ public class Raycaster
         GL.MemoryBarrier(MemoryBarrierFlags.TextureFetchBarrierBit);
     }
 
-    public unsafe void UploadVoxels(byte[] voxels)
+    public void UploadVoxelChunk(Vector3i chunkPos, uint[] voxels)
     {
-        // Check that voxels array is the correct length
-        // TODO: This makes big assumptions that the texture is one byte per pixel!!
-        if (voxels.Length != _voxels.Settings.PixelCount())
-        {
-            var msg = $"Invalid number of voxels. Got {voxels.Length} expected {_voxels.Settings.PixelCount()}.";
-            throw new ArgumentException(msg);
-        }
-
-        fixed (byte* voxelsPtr = voxels)
-        {
-            _voxels.UpdateTexture(new IntPtr(voxelsPtr));
-        }
+        // TODO: Check that the data is valid (position and length)
+        var chunkIndex = chunkPos.X + chunkPos.Y * _voxelDimensions.X +
+                         chunkPos.Z * _voxelDimensions.X * _voxelDimensions.Y;
+        const int chunkSize = 512 * sizeof(uint);
+        _world.UploadData(chunkIndex * chunkSize, chunkSize, voxels);
     }
 
     private void UploadShaderUniforms()
