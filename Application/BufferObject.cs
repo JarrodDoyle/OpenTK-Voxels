@@ -30,6 +30,11 @@ public class BufferObject :IDisposable
     {
         GL.NamedBufferSubData(_id, (IntPtr)offset, size, ref data);
     }
+    
+    public void UploadData<T>(int offset, int size, T[] data) where T : struct
+    {
+        GL.NamedBufferSubData(_id, (IntPtr)offset, size, data);
+    }
 
     public void Dispose()
     {
