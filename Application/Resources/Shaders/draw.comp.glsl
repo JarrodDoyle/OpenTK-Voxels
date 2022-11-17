@@ -13,7 +13,7 @@ layout (std430, binding = 0) buffer WorldConfig {
     int maxRayDepth;
 };
 
-layout (std430, binding = 1) buffer World{
+layout (std430, binding = 1) buffer World {
     Chunk chunks[];
 };
 
@@ -57,21 +57,42 @@ bool RayIntersectAabb(vec3 rayPos, vec3 rayDirInv, out float tmin) {
     return tmax > tmin;
 }
 
-bool PointInsideAabb(ivec3 p) {
-    return p.x >= 0 && p.x < worldSize.x * 8 && p.y >= 0 && p.y < worldSize.y * 8 && p.z >= 0 && p.z < worldSize.z * 8;
+bool PointInsideAabb(ivec3 p, ivec3 min, ivec3 max) {
+    return p.x >= min.x && p.x < max.x && p.y >= min.y && p.y < max.y && p.z >= min.z && p.z < max.z;
 }
 
-bool VoxelHit(ivec3 p) {
-    ivec3 chunkPos = p / 8;
-    uint chunkIndex = chunkPos.x + chunkPos.y * worldSize.x + chunkPos.z * worldSize.x * worldSize.y;
-    Chunk chunk = chunks[chunkIndex];
-    
-    ivec3 localPos = p % 8;
-    uint localIndex = localPos.x + localPos.y * 8 + localPos.z * 64;
-    uint voxelHue = clamp(int(chunk.voxels[localIndex]), 0, 255);
-    
+bool VoxelHit(uint chunkIndex, uint localIndex) {
+    uint voxelHue = clamp(chunks[chunkIndex].voxels[localIndex], 0u, 255u);
     voxelColor = vec4(hsv2rgb(vec3(voxelHue / 255.0, 1.0, 1.0)), 1);
     return voxelHue != 0;
+}
+
+bool TraverseChunk(uint chunkIndex, vec3 rayPos, vec3 rayDir, out HitInfo hitInfo) {
+    bvec3 mask;
+    ivec3 mapPos = ivec3(rayPos);
+    vec3 deltaDist = 1.0 / abs(rayDir);
+    ivec3 rayStep = ivec3(sign(rayDir));
+    vec3 sideDist = (rayStep * (vec3(mapPos) - rayPos) + (rayStep * 0.5) + 0.5) * deltaDist;
+
+    mapPos = mapPos % 8;
+    for (int i = 0; i < maxRayDepth; i++)
+    {
+        if (!PointInsideAabb(mapPos, ivec3(0), ivec3(8))) {
+            break;
+        }
+
+        uint localIndex = mapPos.x + mapPos.y * 8 + mapPos.z * 64;
+        if (VoxelHit(chunkIndex, localIndex)) {
+            hitInfo = HitInfo(true, mapPos + vec3(0.5), voxelColor, mask, length(vec3(mask) * (sideDist - deltaDist)));
+            break;
+        }
+
+        mask = lessThanEqual(sideDist.xyz, min(sideDist.yzx, sideDist.zxy));
+        sideDist += vec3(mask) * deltaDist;
+        mapPos += ivec3(mask) * rayStep;
+    }
+
+    return hitInfo.hit;
 }
 
 bool TraverseWorld(vec3 rayPos, vec3 rayDir, out HitInfo hitInfo) {
@@ -83,27 +104,51 @@ bool TraverseWorld(vec3 rayPos, vec3 rayDir, out HitInfo hitInfo) {
         return false;
     }
 
+    vec3 normal;
     if (tmin > 0) {
-        rayPos += rayDir * (tmin - 0.0001);
+        rayPos += rayDir * tmin;
+
+        // Push the ray a little bit into the bounds of the world
+        vec3 worldCenter = (worldSize * 8) / 2.0;
+        vec3 dist = rayPos - worldCenter;
+        bvec3 strongestAxis = greaterThanEqual(dist.xyz, max(dist.yzx, dist.zxy));
+        normal = vec3(strongestAxis) * ivec3(sign(dist));
+        rayPos -= normal * 0.0001;
     }
     tmin = max(0.0, tmin);
 
-    ivec3 mapPos = ivec3(floor(rayPos));
+    // Convert rayPos into chunk coordinates
+    rayPos /= 8.0;
+
+    ivec3 mapPos = ivec3(rayPos);
     vec3 deltaDist = 1.0 / abs(rayDir);
     ivec3 rayStep = ivec3(sign(rayDir));
     vec3 sideDist = (rayStep * (vec3(mapPos) - rayPos) + (rayStep * 0.5) + 0.5) * deltaDist;
+
+    // TODO: maxRayDepth doesn't account for in-chunk traversals
     for (int i = 0; i < maxRayDepth; i++)
     {
+        if (!PointInsideAabb(mapPos, ivec3(0), worldSize)) {
+            break;
+        }
+
+        // What chunk are we in right now
+        uint chunkIndex = mapPos.x + mapPos.y * worldSize.x + mapPos.z * worldSize.x * worldSize.y;
+
+        // What's our world position?
+        float chunkDistance = length(sideDist * vec3(mask) - deltaDist * vec3(mask));
+        vec3 chunkFrac = (rayPos + rayDir * chunkDistance) - vec3(mapPos);
+
+        // Traverse the chunk!
+        if (TraverseChunk(chunkIndex, chunkFrac * 8, rayDir, hitInfo)) {
+            float d = length(vec3(mask) * (sideDist - deltaDist));
+            hitInfo.d += tmin + d * 8;
+            break;
+        }
+
         mask = lessThanEqual(sideDist.xyz, min(sideDist.yzx, sideDist.zxy));
         sideDist += vec3(mask) * deltaDist;
         mapPos += ivec3(mask) * rayStep;
-        if (!PointInsideAabb(mapPos)) {
-            break;
-        }
-        if (VoxelHit(mapPos)) {
-            hitInfo = HitInfo(true, mapPos + vec3(0.5), voxelColor, mask, tmin + length(vec3(mask) * (sideDist - deltaDist)));
-            break;
-        }
     }
 
     return hitInfo.hit;
@@ -124,6 +169,6 @@ void main() {
     if (TraverseWorld(rayPos, rayDir, hitInfo)) {
         finalColor = hitInfo.color;
     }
-    
+
     imageStore(_DrawTexture, imgCoord, finalColor);
 }
