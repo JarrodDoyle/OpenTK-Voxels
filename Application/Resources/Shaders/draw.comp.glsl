@@ -136,7 +136,8 @@ bool TraverseWorld(vec3 rayPos, vec3 rayDir, out HitInfo hitInfo) {
         uint chunkIndex = mapPos.x + mapPos.y * worldSize.x + mapPos.z * worldSize.x * worldSize.y;
 
         // What's our world position?
-        float chunkDistance = length(sideDist * vec3(mask) - deltaDist * vec3(mask));
+        float chunkDistance = length(vec3(mask) * (sideDist - deltaDist));
+        chunkDistance += 0.0001; // TODO: Find a better way to fix the fpp artifacts!
         vec3 chunkFrac = (rayPos + rayDir * chunkDistance) - vec3(mapPos);
 
         // Traverse the chunk!
