@@ -68,7 +68,7 @@ bool VoxelHit(uint chunkIndex, uint localIndex) {
     return voxelHue != 0;
 }
 
-bool TraverseChunk(uint chunkIndex, vec3 rayPos, vec3 rayDir, out HitInfo hitInfo) {
+bool TraverseChunk(uint chunkIndex, vec3 rayPos, vec3 rayDir, out HitInfo hitInfo, inout uint currentRayDepth) {
     bvec3 mask;
     ivec3 mapPos = ivec3(rayPos);
     vec3 deltaDist = 1.0 / abs(rayDir);
@@ -76,7 +76,8 @@ bool TraverseChunk(uint chunkIndex, vec3 rayPos, vec3 rayDir, out HitInfo hitInf
     vec3 sideDist = (rayStep * (vec3(mapPos) - rayPos) + (rayStep * 0.5) + 0.5) * deltaDist;
 
     mapPos = mapPos % 8;
-    for (int i = 0; i < maxRayDepth; i++)
+    const uint maxStepsInChunk = 8 * 3;
+    for (int i = 0; i < maxStepsInChunk; i++)
     {
         if (!PointInsideAabb(mapPos, ivec3(0), ivec3(8))) {
             break;
@@ -88,9 +89,14 @@ bool TraverseChunk(uint chunkIndex, vec3 rayPos, vec3 rayDir, out HitInfo hitInf
             break;
         }
 
+        if (currentRayDepth >= maxRayDepth) {
+            break;
+        }
+
         mask = lessThanEqual(sideDist.xyz, min(sideDist.yzx, sideDist.zxy));
         sideDist += vec3(mask) * deltaDist;
         mapPos += ivec3(mask) * rayStep;
+        currentRayDepth++;
     }
 
     return hitInfo.hit;
@@ -126,8 +132,9 @@ bool TraverseWorld(vec3 rayPos, vec3 rayDir, out HitInfo hitInfo) {
     ivec3 rayStep = ivec3(sign(rayDir));
     vec3 sideDist = (rayStep * (vec3(mapPos) - rayPos) + (rayStep * 0.5) + 0.5) * deltaDist;
 
-    // TODO: maxRayDepth doesn't account for in-chunk traversals
-    for (int i = 0; i < maxRayDepth; i++)
+    uint currentRayDepth = 0;
+    uint maxChunkSteps = worldSize.x + worldSize.y + worldSize.z;
+    for (int i = 0; i < maxChunkSteps; i++)
     {
         if (!PointInsideAabb(mapPos, ivec3(0), worldSize)) {
             break;
@@ -142,10 +149,14 @@ bool TraverseWorld(vec3 rayPos, vec3 rayDir, out HitInfo hitInfo) {
         vec3 chunkFrac = (rayPos + rayDir * chunkDistance) - vec3(mapPos);
 
         // Traverse the chunk!
-        if (TraverseChunk(chunkIndex, chunkFrac * 8, rayDir, hitInfo)) {
+        if (TraverseChunk(chunkIndex, chunkFrac * 8, rayDir, hitInfo, currentRayDepth)) {
             float d = length(vec3(mask) * (sideDist - deltaDist));
             hitInfo.d += tmin + d * 8;
             hitInfo.pos += mapPos * 8.0;
+            break;
+        }
+
+        if (currentRayDepth >= maxRayDepth) {
             break;
         }
 
