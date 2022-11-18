@@ -144,6 +144,7 @@ bool TraverseWorld(vec3 rayPos, vec3 rayDir, out HitInfo hitInfo) {
         if (TraverseChunk(chunkIndex, chunkFrac * 8, rayDir, hitInfo)) {
             float d = length(vec3(mask) * (sideDist - deltaDist));
             hitInfo.d += tmin + d * 8;
+            hitInfo.pos += mapPos * 8.0;
             break;
         }
 
