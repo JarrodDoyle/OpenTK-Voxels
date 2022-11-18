@@ -52,7 +52,7 @@ public class Raycaster
 
         _world = new BufferObject(new BufferObjectSettings
         {
-            Size = sizeof(uint) * 512 * _voxelDimensions.X * _voxelDimensions.Y * _voxelDimensions.Z,
+            Size = sizeof(byte) * 512 * _voxelDimensions.X * _voxelDimensions.Y * _voxelDimensions.Z,
             Data = IntPtr.Zero,
             StorageFlags = BufferStorageFlags.DynamicStorageBit,
             RangeTarget = BufferRangeTarget.ShaderStorageBuffer,
@@ -71,12 +71,12 @@ public class Raycaster
         GL.MemoryBarrier(MemoryBarrierFlags.TextureFetchBarrierBit);
     }
 
-    public void UploadVoxelChunk(Vector3i chunkPos, uint[] voxels)
+    public void UploadVoxelChunk(Vector3i chunkPos, byte[] voxels)
     {
         // TODO: Check that the data is valid (position and length)
         var chunkIndex = chunkPos.X + chunkPos.Y * _voxelDimensions.X +
                          chunkPos.Z * _voxelDimensions.X * _voxelDimensions.Y;
-        const int chunkSize = 512 * sizeof(uint);
+        const int chunkSize = 512 * sizeof(byte);
         _world.UploadData(chunkIndex * chunkSize, chunkSize, voxels);
     }
 

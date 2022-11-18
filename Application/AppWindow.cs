@@ -64,7 +64,7 @@ public class AppWindow : GameWindow
 
         const int numVoxels = 8 * 8 * 8;
         var noiseData = new float[numVoxels];
-        var voxels = new uint[numVoxels];
+        var voxels = new byte[numVoxels];
         for (var i = 0; i < worldDims.X; i++)
         {
             for (var j = 0; j < worldDims.Y; j++)
@@ -73,7 +73,7 @@ public class AppWindow : GameWindow
                 {
                     generator.GenUniformGrid3D(noiseData, i * 8, j * 8, k * 8, 8, 8, 8, 0.005f, seed);
                     for (var v = 0; v < numVoxels; v++)
-                        voxels[v] = (uint) (noiseData[v] > 0 ? 0 : 1 + v % (numVoxels - 1) / 2);
+                        voxels[v] = (byte) (noiseData[v] > 0 ? 0 : Math.Min(1 + v % (numVoxels - 1) / 2, 255));
                     _raycaster.UploadVoxelChunk(new Vector3i(i, j, k), voxels);
                 }
             }

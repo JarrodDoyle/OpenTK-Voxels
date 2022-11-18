@@ -3,7 +3,8 @@
 layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
 struct Chunk {
-    uint voxels[512];
+    // Each uint in this array is 4 packed byte voxels
+    uint voxels[512 / 4];
 };
 
 layout (binding = 0, rgba32f) restrict uniform image2D _DrawTexture;
@@ -62,7 +63,7 @@ bool PointInsideAabb(ivec3 p, ivec3 min, ivec3 max) {
 }
 
 bool VoxelHit(uint chunkIndex, uint localIndex) {
-    uint voxelHue = clamp(chunks[chunkIndex].voxels[localIndex], 0u, 255u);
+    uint voxelHue = (chunks[chunkIndex].voxels[localIndex / 4] >> (localIndex % 4 * 8)) & 0xFF;
     voxelColor = vec4(hsv2rgb(vec3(voxelHue / 255.0, 1.0, 1.0)), 1);
     return voxelHue != 0;
 }
