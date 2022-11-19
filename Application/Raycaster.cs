@@ -76,8 +76,13 @@ public class Raycaster
         // TODO: Check that the data is valid (position and length)
         var chunkIndex = chunkPos.X + chunkPos.Y * _voxelDimensions.X +
                          chunkPos.Z * _voxelDimensions.X * _voxelDimensions.Y;
-        const int chunkSize = 512 * sizeof(byte);
-        _world.UploadData(chunkIndex * chunkSize, chunkSize, voxels);
+
+        const int voxelDataSize = 512 * sizeof(byte);
+        const int chunkSize = voxelDataSize + sizeof(uint);
+
+        var numFilled = voxels.Count(voxel => voxel != 0);
+        _world.UploadData(chunkIndex * chunkSize, sizeof(uint), numFilled);
+        _world.UploadData(chunkIndex * chunkSize + sizeof(uint), voxelDataSize, voxels);
     }
 
     private void UploadShaderUniforms()

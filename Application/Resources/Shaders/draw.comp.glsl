@@ -3,8 +3,8 @@
 layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
 struct Chunk {
-    // Each uint in this array is 4 packed byte voxels
-    uint voxels[512 / 4];
+    uint numFilled;
+    uint voxels[512 / 4];// Each uint in this array is 4 packed byte voxels
 };
 
 layout (binding = 0, rgba32f) restrict uniform image2D _DrawTexture;
@@ -69,6 +69,11 @@ bool VoxelHit(uint chunkIndex, uint localIndex) {
 }
 
 bool TraverseChunk(uint chunkIndex, vec3 rayPos, vec3 rayDir, out HitInfo hitInfo, inout uint currentRayDepth) {
+    // TODO: Doesn't update ray depth!
+    if (chunks[chunkIndex].numFilled == 0) {
+        return false;
+    }
+
     bvec3 mask;
     ivec3 mapPos = ivec3(rayPos);
     vec3 deltaDist = 1.0 / abs(rayDir);
