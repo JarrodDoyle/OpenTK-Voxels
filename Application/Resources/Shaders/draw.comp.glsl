@@ -4,7 +4,7 @@ layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
 struct Chunk {
     uint numFilled;
-    uint voxels[512 / 4];// Each uint in this array is 4 packed byte voxels
+    uint voxels[512 / 32]; // Each uint in this array is 32 packed single-bit voxels
 };
 
 layout (binding = 0, rgba32f) restrict uniform image2D _DrawTexture;
@@ -33,7 +33,6 @@ struct HitInfo {
 };
 
 int currentRayDepth = 0;
-vec4 voxelColor;
 
 vec3 hsv2rgb(vec3 c) {
     vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
@@ -63,9 +62,7 @@ bool PointInsideAabb(ivec3 p, ivec3 min, ivec3 max) {
 }
 
 bool VoxelHit(uint chunkIndex, uint localIndex) {
-    uint voxelHue = (chunks[chunkIndex].voxels[localIndex / 4] >> (localIndex % 4 * 8)) & 0xFF;
-    voxelColor = vec4(hsv2rgb(vec3(voxelHue / 255.0, 1.0, 1.0)), 1);
-    return voxelHue != 0;
+    return (chunks[chunkIndex].voxels[localIndex / 32] >> (localIndex % 32) & 1) != 0;
 }
 
 bool TraverseChunk(uint chunkIndex, vec3 rayPos, vec3 rayDir, out HitInfo hitInfo) {
@@ -90,7 +87,7 @@ bool TraverseChunk(uint chunkIndex, vec3 rayPos, vec3 rayDir, out HitInfo hitInf
 
         uint localIndex = mapPos.x + mapPos.y * 8 + mapPos.z * 64;
         if (VoxelHit(chunkIndex, localIndex)) {
-            hitInfo = HitInfo(true, mapPos + vec3(0.5), voxelColor, mask, length(vec3(mask) * (sideDist - deltaDist)));
+            hitInfo = HitInfo(true, mapPos + vec3(0.5), vec4(1.0), mask, length(vec3(mask) * (sideDist - deltaDist)));
             break;
         }
 
@@ -185,7 +182,7 @@ void main() {
     vec4 finalColor;
     HitInfo hitInfo;
     if (TraverseWorld(rayPos, rayDir, hitInfo)) {
-        finalColor = hitInfo.color;
+        finalColor.rgb = hitInfo.color.rgb * (hitInfo.mask.x ? 0.5 : hitInfo.mask.y ? 1.0 : hitInfo.mask.z ? 0.75 : 0.0);
     }
 
     imageStore(_DrawTexture, imgCoord, finalColor);

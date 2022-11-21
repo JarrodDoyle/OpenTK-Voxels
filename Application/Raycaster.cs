@@ -52,7 +52,7 @@ public class Raycaster
 
         _world = new BufferObject(new BufferObjectSettings
         {
-            Size = sizeof(byte) * 512 * _voxelDimensions.X * _voxelDimensions.Y * _voxelDimensions.Z,
+            Size = (512 / 8) * _voxelDimensions.X * _voxelDimensions.Y * _voxelDimensions.Z,
             Data = IntPtr.Zero,
             StorageFlags = BufferStorageFlags.DynamicStorageBit,
             RangeTarget = BufferRangeTarget.ShaderStorageBuffer,
@@ -77,7 +77,7 @@ public class Raycaster
         var chunkIndex = chunkPos.X + chunkPos.Y * _voxelDimensions.X +
                          chunkPos.Z * _voxelDimensions.X * _voxelDimensions.Y;
 
-        const int voxelDataSize = 512 * sizeof(byte);
+        const int voxelDataSize = 512 / 8;
         const int chunkSize = voxelDataSize + sizeof(uint);
 
         var numFilled = voxels.Count(voxel => voxel != 0);
