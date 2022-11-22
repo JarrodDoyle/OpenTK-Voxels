@@ -55,35 +55,8 @@ public class AppWindow : GameWindow
         _raycaster = new Raycaster(ClientSize.X, ClientSize.Y, worldDims, 512);
 
         // Generate voxels!
-        var seed = (int) DateTime.Now.ToBinary();
-        var generator = new FastNoise("FractalFBm");
-        generator.Set("Source", new FastNoise("Simplex"));
-        generator.Set("Gain", 0.5f);
-        generator.Set("Octaves", 5);
-        generator.Set("Lacunarity", 2f);
-
-        const int numVoxels = 8 * 8 * 8;
-        var noiseData = new float[numVoxels];
-        var voxels = new byte[numVoxels / 8];
-        for (var i = 0; i < worldDims.X; i++)
-        {
-            for (var j = 0; j < worldDims.Y; j++)
-            {
-                for (var k = 0; k < worldDims.Z; k++)
-                {
-                    generator.GenUniformGrid3D(noiseData, i * 8, j * 8, k * 8, 8, 8, 8, 0.005f, seed);
-                    for (var v = 0; v < numVoxels / 8; v++)
-                    {
-                        var value = 0;
-                        for (var byteIdx = 0; byteIdx < 8; byteIdx++)
-                            value += noiseData[v * 8 + byteIdx] > 0 ? 0 : 1 << byteIdx;
-                        voxels[v] = (byte) value;
-                    }
-
-                    _raycaster.UploadVoxelChunk(new Vector3i(i, j, k), voxels);
-                }
-            }
-        }
+        var voxelWorld = new Brickmap.World(worldDims, Vector3i.One * 8);
+        voxelWorld.Generate(2, 0.005f, "Simplex", 0.5f, 1, 2f);
 
         _shader = new ShaderProgram(new Dictionary<string, ShaderType>
         {
