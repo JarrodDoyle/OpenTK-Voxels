@@ -52,7 +52,7 @@ public class AppWindow : GameWindow
 
         // Load our stuff!
         var worldDims = Vector3i.One * 64;
-        _raycaster = new Raycaster(ClientSize.X, ClientSize.Y, worldDims, 512);
+        _raycaster = new Raycaster(ClientSize.X, ClientSize.Y);
 
         // Generate voxels!
         var voxelWorld = new Brickmap.World(worldDims, Vector3i.One * 8);
