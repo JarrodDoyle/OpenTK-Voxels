@@ -3,7 +3,6 @@
 layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
 struct Chunk {
-    uint numFilled;
     uint voxels[512 / 32]; // Each uint in this array is 32 packed single-bit voxels
 };
 
@@ -16,6 +15,10 @@ layout (std430, binding = 0) buffer WorldConfig {
 
 layout (std430, binding = 1) buffer World {
     Chunk chunks[];
+};
+
+layout (std430, binding = 2) buffer Indices {
+    uint chunkIndices[];
 };
 
 layout (binding = 0) uniform Camera {
@@ -62,12 +65,13 @@ bool PointInsideAabb(ivec3 p, ivec3 min, ivec3 max) {
 }
 
 bool VoxelHit(uint chunkIndex, uint localIndex) {
-    return (chunks[chunkIndex].voxels[localIndex / 32] >> (localIndex % 32) & 1) != 0;
+    return (chunks[chunkIndex & 0x7FFFFFFFu].voxels[localIndex / 32] >> (localIndex % 32) & 1u) != 0;
 }
 
-bool TraverseChunk(uint chunkIndex, vec3 rayPos, vec3 rayDir, out HitInfo hitInfo) {
+bool TraverseChunk(uint indicesIndex, vec3 rayPos, vec3 rayDir, out HitInfo hitInfo) {
     // TODO: Doesn't update ray depth!
-    if (chunks[chunkIndex].numFilled == 0) {
+    uint chunkIndex = chunkIndices[indicesIndex];
+    if (chunkIndex == 0) {
         return false;
     }
 
@@ -142,15 +146,15 @@ bool TraverseWorld(vec3 rayPos, vec3 rayDir, out HitInfo hitInfo) {
         }
 
         // What chunk are we in right now
-        uint chunkIndex = mapPos.x + mapPos.y * worldSize.x + mapPos.z * worldSize.x * worldSize.y;
+        uint indicesIndex = mapPos.x + mapPos.y * worldSize.x + mapPos.z * worldSize.x * worldSize.y;
 
         // What's our world position?
         float chunkDistance = length(vec3(mask) * (sideDist - deltaDist));
-        chunkDistance += 0.0001; // TODO: Find a better way to fix the fpp artifacts!
+        chunkDistance += 0.0001;// TODO: Find a better way to fix the fpp artifacts!
         vec3 chunkFrac = (rayPos + rayDir * chunkDistance) - vec3(mapPos);
 
         // Traverse the chunk!
-        if (TraverseChunk(chunkIndex, chunkFrac * 8, rayDir, hitInfo)) {
+        if (TraverseChunk(indicesIndex, chunkFrac * 8, rayDir, hitInfo)) {
             float d = length(vec3(mask) * (sideDist - deltaDist));
             hitInfo.d += tmin + d * 8;
             hitInfo.pos += mapPos * 8.0;

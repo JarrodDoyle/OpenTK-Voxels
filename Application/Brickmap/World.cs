@@ -16,16 +16,22 @@ public class World
     public Vector3i GridDimensions { get; }
     public Vector3i MapDimensions { get; }
 
-    private readonly Brick[] _bricks;
-    private BufferObject _worldConfig;
-    private BufferObject _worldVoxels;
+    private uint _brickmapSize;
+    private uint _brickPoolSize;
+    private uint _brickPoolIndex;
 
-    public World(Vector3i gridDimensions, Vector3i mapDimensions)
+    private readonly uint[] _indices;
+    private readonly List<Brick> _brickPool;
+    private BufferObject _indicesBuffer;
+    private BufferObject _brickPoolBuffer;
+    private BufferObject _worldConfig;
+
+    public World(Vector3i gridDimensions, Vector3i mapDimensions, uint brickPoolSize)
     {
         GridDimensions = gridDimensions;
         MapDimensions = mapDimensions;
-        _bricks = new Brick[gridDimensions.X * gridDimensions.Y * gridDimensions.Z];
 
+        // Allocate the World Config SSBO
         _worldConfig = new BufferObject(new BufferObjectSettings
         {
             Size = Vector3i.SizeInBytes + sizeof(int),
@@ -38,13 +44,31 @@ public class World
         _worldConfig.UploadData(0, Vector3i.SizeInBytes, gridDimensions);
         _worldConfig.UploadData(Vector3i.SizeInBytes, sizeof(int), 512);
 
-        _worldVoxels = new BufferObject(new BufferObjectSettings
+        // Allocate the Brickmap Pool SSBO
+        _brickPool = new List<Brick>();
+        _brickmapSize = (uint) (MapDimensions.X * MapDimensions.Y * MapDimensions.Z / 8);
+        _brickPoolSize = brickPoolSize;
+        _brickPoolIndex = 0;
+        _brickPoolBuffer = new BufferObject(new BufferObjectSettings
         {
-            Size = (512 / 8) * gridDimensions.X * gridDimensions.Y * gridDimensions.Z,
+            Size = (int) (_brickmapSize * _brickPoolSize),
             Data = IntPtr.Zero,
             StorageFlags = BufferStorageFlags.DynamicStorageBit,
             RangeTarget = BufferRangeTarget.ShaderStorageBuffer,
             Index = 1,
+            Offset = 0,
+        });
+
+        // Allocate the Brickmap Index SSBO
+        var numIndices = gridDimensions.X * gridDimensions.Y * gridDimensions.Z;
+        _indices = new uint[numIndices];
+        _indicesBuffer = new BufferObject(new BufferObjectSettings
+        {
+            Size = sizeof(uint) * numIndices,
+            Data = IntPtr.Zero,
+            StorageFlags = BufferStorageFlags.DynamicStorageBit,
+            RangeTarget = BufferRangeTarget.ShaderStorageBuffer,
+            Index = 2,
             Offset = 0,
         });
     }
@@ -64,22 +88,30 @@ public class World
         for (var z = 0; z < GridDimensions.Z; z++)
             GenerateMap(x, y, z, generator, seed, frequency);
 
-        // Upload the brickmaps
-        const int voxelDataSize = 512 / 8;
-        const int chunkSize = voxelDataSize + sizeof(uint);
-        var bricksArr = _bricks.ToArray();
-        for (var i = 0; i < bricksArr.Length; i++)
+        // Upload all the non-empty bricks
+        var bricksArr = _brickPool.ToArray();
+        var offset = 0;
+        foreach (var brick in bricksArr)
         {
-            var brick = bricksArr[i];
-            // TODO: This isn't actually correct but it works for now (Only checks chunks of 4 bytes)
-            var numFilled = brick.Data.Count(voxel => voxel != 0);
-            _worldVoxels.UploadData(i * chunkSize, sizeof(uint), numFilled);
-            _worldVoxels.UploadData(i * chunkSize + sizeof(uint), voxelDataSize, brick.Data);
+            var brickSize = brick.Data.Length * sizeof(uint);
+            _brickPoolBuffer.UploadData(offset, brickSize, brick.Data);
+            offset += brickSize;
+            LoadedBricks++;
+        }
+
+        _indicesBuffer.UploadData(0, _indices.Length * sizeof(uint), _indices);
+
+        if (LoadedBricks > _brickPoolSize)
+        {
+            Console.WriteLine("Uh oh too many bricks loaded!");
+            Console.WriteLine(
+                $"_indices.length: {_indices.Length}, LoadedBricks: {LoadedBricks}, _brickPoolSize: {_brickPoolSize}");
         }
     }
 
     private void GenerateMap(int gridX, int gridY, int gridZ, FastNoise generator, int seed, float frequency)
     {
+        // TODO: Multithread this!
         // Generate noise values
         var numVoxels = MapDimensions.X * MapDimensions.Y * MapDimensions.Z;
         var noiseData = new float[numVoxels];
@@ -88,6 +120,7 @@ public class World
 
         // Build the brick
         const int voxelsPerUint = sizeof(uint) * 8;
+        var empty = true;
         var brick = new Brick {Data = new uint[numVoxels / voxelsPerUint]};
         for (var brickX = 0; brickX < MapDimensions.X; brickX++)
         for (var brickY = 0; brickY < MapDimensions.Y; brickY++)
@@ -97,10 +130,15 @@ public class World
             if (noiseData[brickIndex] > 0) continue;
 
             FilledVoxels++;
+            empty = false;
             brick.Data[brickIndex / voxelsPerUint] |= (uint) (1 << (brickIndex % voxelsPerUint));
         }
 
-        var gridIndex = gridX + gridY * GridDimensions.X + gridZ * GridDimensions.X * GridDimensions.Y;
-        _bricks[gridIndex] = brick;
+        if (!empty)
+        {
+            var gridIndex = gridX + gridY * GridDimensions.X + gridZ * GridDimensions.X * GridDimensions.Y;
+            _indices[gridIndex] = (uint) _brickPool.Count | (1u << 31);
+            _brickPool.Add(brick);
+        }
     }
 }

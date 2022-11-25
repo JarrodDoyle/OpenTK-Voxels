@@ -55,7 +55,7 @@ public class AppWindow : GameWindow
         _raycaster = new Raycaster(ClientSize.X, ClientSize.Y);
 
         // Generate voxels!
-        var voxelWorld = new Brickmap.World(worldDims, Vector3i.One * 8);
+        var voxelWorld = new Brickmap.World(worldDims, Vector3i.One * 8, (uint) Math.Pow(256, 3));
         voxelWorld.Generate(2, 0.005f, "Simplex", 0.5f, 1, 2f);
 
         _shader = new ShaderProgram(new Dictionary<string, ShaderType>
