@@ -68,13 +68,8 @@ bool VoxelHit(uint chunkIndex, uint localIndex) {
     return (chunks[chunkIndex & 0x7FFFFFFFu].voxels[localIndex / 32] >> (localIndex % 32) & 1u) != 0;
 }
 
-bool TraverseChunk(uint indicesIndex, vec3 rayPos, vec3 rayDir, out HitInfo hitInfo) {
+bool TraverseChunk(uint chunkIndex, vec3 rayPos, vec3 rayDir, out HitInfo hitInfo) {
     // TODO: Doesn't update ray depth!
-    uint chunkIndex = chunkIndices[indicesIndex];
-    if (chunkIndex == 0) {
-        return false;
-    }
-
     bvec3 mask = bvec3(false);
     ivec3 mapPos = ivec3(rayPos);
     vec3 deltaDist = 1.0 / abs(rayDir);
@@ -147,20 +142,22 @@ bool TraverseWorld(vec3 rayPos, vec3 rayDir, out HitInfo hitInfo) {
 
         // What chunk are we in right now
         uint indicesIndex = mapPos.x + mapPos.y * worldSize.x + mapPos.z * worldSize.x * worldSize.y;
+        uint rawChunkIndex = chunkIndices[indicesIndex];
+        if (rawChunkIndex != 0) {
+            // What's our world position?
+            float chunkDistance = length(vec3(mask) * (sideDist - deltaDist));
+            chunkDistance += 0.0001;// TODO: Find a better way to fix the fpp artifacts!
+            vec3 chunkFrac = (rayPos + rayDir * chunkDistance) - vec3(mapPos);
 
-        // What's our world position?
-        float chunkDistance = length(vec3(mask) * (sideDist - deltaDist));
-        chunkDistance += 0.0001;// TODO: Find a better way to fix the fpp artifacts!
-        vec3 chunkFrac = (rayPos + rayDir * chunkDistance) - vec3(mapPos);
-
-        // Traverse the chunk!
-        if (TraverseChunk(indicesIndex, chunkFrac * 8, rayDir, hitInfo)) {
-            float d = length(vec3(mask) * (sideDist - deltaDist));
-            hitInfo.d += tmin + d * 8;
-            hitInfo.pos += mapPos * 8.0;
-            break;
+            // Traverse the chunk!
+            if (TraverseChunk(rawChunkIndex, chunkFrac * 8, rayDir, hitInfo)) {
+                float d = length(vec3(mask) * (sideDist - deltaDist));
+                hitInfo.d += tmin + d * 8;
+                hitInfo.pos += mapPos * 8.0;
+                break;
+            }
         }
-
+        
         if (currentRayDepth >= maxRayDepth) {
             break;
         }
