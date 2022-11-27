@@ -27,8 +27,17 @@ public class World
     private BufferObject _brickLoadQueueBuffer;
     private BufferObject _worldConfig;
 
-    public World(Vector3i gridDimensions, Vector3i mapDimensions, uint brickPoolSize)
+    private readonly FastNoise _generator;
+    private int _seed;
+    private float _frequency;
+
+    public World(Vector3i gridDimensions, Vector3i mapDimensions, uint brickPoolSize, FastNoise generator, int seed,
+        float frequency)
     {
+        _generator = generator;
+        _seed = seed;
+        _frequency = frequency;
+
         GridDimensions = gridDimensions;
         MapDimensions = mapDimensions;
 
@@ -73,6 +82,12 @@ public class World
             Offset = 0,
         });
 
+        // Upload indices marked as unloaded
+        var gpuIndices = new uint[numIndices];
+        for (var i = 0; i < gpuIndices.Length; i++)
+            gpuIndices[i] = 0x10000000u;
+        _indicesBuffer.UploadData(0, sizeof(uint) * numIndices, gpuIndices);
+
         // Allocate the Load Queue SSBO
         // TODO: Don't hardcode the load queue size!
         var loadQueueMaxCount = 1024;
@@ -87,42 +102,6 @@ public class World
         });
         _brickLoadQueueBuffer.UploadData(0, sizeof(uint), 0u);
         _brickLoadQueueBuffer.UploadData(sizeof(uint), sizeof(uint), loadQueueMaxCount);
-    }
-
-    public void Generate(int seed, float frequency, string generatorType, float gain, int octaves, float lacunarity)
-    {
-        // Create the generator
-        var generator = new FastNoise("FractalFBm");
-        generator.Set("Source", new FastNoise(generatorType));
-        generator.Set("Gain", gain);
-        generator.Set("Octaves", octaves);
-        generator.Set("Lacunarity", lacunarity);
-
-        // Generate each brickmap
-        for (var x = 0; x < GridDimensions.X; x++)
-        for (var y = 0; y < GridDimensions.Y; y++)
-        for (var z = 0; z < GridDimensions.Z; z++)
-            GenerateMap(x, y, z, generator, seed, frequency);
-
-        // Upload all the non-empty bricks
-        // var bricksArr = _brickPool.ToArray();
-        // var offset = 0;
-        // foreach (var brick in bricksArr)
-        // {
-        //     var brickSize = brick.Data.Length * sizeof(uint);
-        //     _brickPoolBuffer.UploadData(offset, brickSize, brick.Data);
-        //     offset += brickSize;
-        //     LoadedBricks++;
-        // }
-
-        _indicesBuffer.UploadData(0, _indices.Length * sizeof(uint), _indices);
-
-        if (LoadedBricks > _brickPoolSize)
-        {
-            Console.WriteLine("Uh oh too many bricks loaded!");
-            Console.WriteLine(
-                $"_indices.length: {_indices.Length}, LoadedBricks: {LoadedBricks}, _brickPoolSize: {_brickPoolSize}");
-        }
     }
 
     private void GenerateMap(int gridX, int gridY, int gridZ, FastNoise generator, int seed, float frequency)
@@ -156,6 +135,13 @@ public class World
             _indices[gridIndex] = (uint) _brickPool.Count | (1u << 28);
             _brickPool.Add(brick);
         }
+
+        if (LoadedBricks > _brickPoolSize)
+        {
+            Console.WriteLine("Uh oh too many bricks loaded!");
+            Console.WriteLine(
+                $"_indices.length: {_indices.Length}, LoadedBricks: {LoadedBricks}, _brickPoolSize: {_brickPoolSize}");
+        }
     }
 
     public void ProcessLoadQueue()
@@ -163,15 +149,19 @@ public class World
         // Get loadQueueCount
         _brickLoadQueueBuffer.DownloadData(0, sizeof(uint), out uint loadCount);
         if (loadCount == 0) return;
-        
+
         // Get loadQueue (up to length of loadQueueCount)
         // TODO: Don't hardcode the max!
-        var trueLoadCount = Math.Min(loadCount, 1024);
+        loadCount = Math.Min(loadCount, 1024);
         var loadPositions = new Vector4i[loadCount];
-        _brickLoadQueueBuffer.DownloadData(4 * sizeof(uint), (int) (trueLoadCount * Vector4i.SizeInBytes), loadPositions);
+        _brickLoadQueueBuffer.DownloadData(4 * sizeof(uint), (int) (loadCount * Vector4i.SizeInBytes), loadPositions);
 
         // Reset loadCount
         _brickLoadQueueBuffer.UploadData(0, sizeof(uint), 0u);
+
+        // Generate the requested bricks
+        foreach (var pos in loadPositions)
+            GenerateMap(pos.X, pos.Y, pos.Z, _generator, _seed, _frequency);
 
         // Upload the requested bricks and update their index
         var bricksArr = _brickPool.ToArray();
@@ -180,6 +170,12 @@ public class World
             // Get the CPU brick index + brick
             var indicesIndex = pos.X + pos.Y * GridDimensions.X + pos.Z * GridDimensions.X * GridDimensions.Y;
             var rawIndex = _indices[indicesIndex];
+            if (rawIndex == 0)
+            {
+                _indicesBuffer.UploadData(indicesIndex * sizeof(uint), sizeof(uint), 0);
+                continue;
+            }
+
             var index = rawIndex & 0x0FFFFFFFu;
             var brick = bricksArr[index];
 
