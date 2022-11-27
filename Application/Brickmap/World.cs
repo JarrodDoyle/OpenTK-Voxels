@@ -137,7 +137,7 @@ public class World
         if (!empty)
         {
             var gridIndex = gridX + gridY * GridDimensions.X + gridZ * GridDimensions.X * GridDimensions.Y;
-            _indices[gridIndex] = (uint) _brickPool.Count | (1u << 31);
+            _indices[gridIndex] = (uint) _brickPool.Count | (1u << 28);
             _brickPool.Add(brick);
         }
     }

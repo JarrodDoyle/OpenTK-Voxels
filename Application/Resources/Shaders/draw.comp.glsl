@@ -65,7 +65,7 @@ bool PointInsideAabb(ivec3 p, ivec3 min, ivec3 max) {
 }
 
 bool VoxelHit(uint chunkIndex, uint localIndex) {
-    return (chunks[chunkIndex & 0x7FFFFFFFu].voxels[localIndex / 32] >> (localIndex % 32) & 1u) != 0;
+    return (chunks[chunkIndex].voxels[localIndex / 32] >> (localIndex % 32) & 1u) != 0;
 }
 
 bool TraverseChunk(uint chunkIndex, vec3 rayPos, vec3 rayDir, out HitInfo hitInfo) {
@@ -143,14 +143,15 @@ bool TraverseWorld(vec3 rayPos, vec3 rayDir, out HitInfo hitInfo) {
         // What chunk are we in right now
         uint indicesIndex = mapPos.x + mapPos.y * worldSize.x + mapPos.z * worldSize.x * worldSize.y;
         uint rawChunkIndex = chunkIndices[indicesIndex];
-        if (rawChunkIndex != 0) {
+        uint loadState = (rawChunkIndex >> 28u) & 0xFu;
+        if (loadState == 1u) {
             // What's our world position?
             float chunkDistance = length(vec3(mask) * (sideDist - deltaDist));
             chunkDistance += 0.0001;// TODO: Find a better way to fix the fpp artifacts!
             vec3 chunkFrac = (rayPos + rayDir * chunkDistance) - vec3(mapPos);
 
             // Traverse the chunk!
-            if (TraverseChunk(rawChunkIndex, chunkFrac * 8, rayDir, hitInfo)) {
+            if (TraverseChunk(rawChunkIndex & 0x0FFFFFFFu, chunkFrac * 8, rayDir, hitInfo)) {
                 float d = length(vec3(mask) * (sideDist - deltaDist));
                 hitInfo.d += tmin + d * 8;
                 hitInfo.pos += mapPos * 8.0;
