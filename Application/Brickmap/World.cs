@@ -19,6 +19,7 @@ public class World
     private uint _brickmapSize;
     private uint _brickPoolSize;
     private uint _brickPoolIndex;
+    private int _maxLoadQueueCount;
 
     private readonly uint[] _indices;
     private readonly List<Brick> _brickPool;
@@ -31,8 +32,8 @@ public class World
     private int _seed;
     private float _frequency;
 
-    public World(Vector3i gridDimensions, Vector3i mapDimensions, uint brickPoolSize, FastNoise generator, int seed,
-        float frequency)
+    public World(Vector3i gridDimensions, Vector3i mapDimensions, uint brickPoolSize, int maxLoadQueueCount,
+        FastNoise generator, int seed, float frequency)
     {
         _generator = generator;
         _seed = seed;
@@ -89,11 +90,10 @@ public class World
         _indicesBuffer.UploadData(0, sizeof(uint) * numIndices, gpuIndices);
 
         // Allocate the Load Queue SSBO
-        // TODO: Don't hardcode the load queue size!
-        var loadQueueMaxCount = 1024;
+        _maxLoadQueueCount = maxLoadQueueCount;
         _brickLoadQueueBuffer = new BufferObject(new BufferObjectSettings
         {
-            Size = 4 * sizeof(uint) + loadQueueMaxCount * Vector4i.SizeInBytes,
+            Size = 4 * sizeof(uint) + _maxLoadQueueCount * Vector4i.SizeInBytes,
             Data = IntPtr.Zero,
             StorageFlags = BufferStorageFlags.DynamicStorageBit,
             RangeTarget = BufferRangeTarget.ShaderStorageBuffer,
@@ -101,7 +101,7 @@ public class World
             Offset = 0,
         });
         _brickLoadQueueBuffer.UploadData(0, sizeof(uint), 0u);
-        _brickLoadQueueBuffer.UploadData(sizeof(uint), sizeof(uint), loadQueueMaxCount);
+        _brickLoadQueueBuffer.UploadData(sizeof(uint), sizeof(uint), _maxLoadQueueCount);
     }
 
     private void GenerateMap(int gridX, int gridY, int gridZ, FastNoise generator, int seed, float frequency)
@@ -151,8 +151,7 @@ public class World
         if (loadCount == 0) return;
 
         // Get loadQueue (up to length of loadQueueCount)
-        // TODO: Don't hardcode the max!
-        loadCount = Math.Min(loadCount, 1024);
+        loadCount = Math.Min(loadCount, (uint) _maxLoadQueueCount);
         var loadPositions = new Vector4i[loadCount];
         _brickLoadQueueBuffer.DownloadData(4 * sizeof(uint), (int) (loadCount * Vector4i.SizeInBytes), loadPositions);
 

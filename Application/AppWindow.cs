@@ -63,7 +63,8 @@ public class AppWindow : GameWindow
         generator.Set("Gain", 0.5f);
         generator.Set("Octaves", 1);
         generator.Set("Lacunarity", 2f);
-        _world = new Brickmap.World(worldDims, Vector3i.One * 8, (uint) Math.Pow(128, 3), generator, seed, frequency);
+        _world = new Brickmap.World(
+            worldDims, Vector3i.One * 8, (uint) Math.Pow(128, 3), 128, generator, seed, frequency);
 
         _shader = new ShaderProgram(new Dictionary<string, ShaderType>
         {
