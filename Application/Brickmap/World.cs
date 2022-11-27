@@ -160,8 +160,6 @@ public class World
 
     public void ProcessLoadQueue()
     {
-        // Console.WriteLine($"Loaded: {LoadedBricks}, MaxLoaded: {_brickPoolSize}");
-        
         // Get loadQueueCount
         _brickLoadQueueBuffer.DownloadData(0, sizeof(uint), out uint loadCount);
         if (loadCount == 0) return;
@@ -195,7 +193,5 @@ public class World
             _brickPoolBuffer.UploadData((int) (LoadedBricks * brickSize), brickSize, brick.Data);
             LoadedBricks++;
         }
-        
-        Console.WriteLine(trueLoadCount);
     }
 }
