@@ -15,6 +15,7 @@ public class AppWindow : GameWindow
     private BufferObject _cameraUbo;
     private Camera _camera;
     private UI.UiManager _uiManager;
+    private Brickmap.World _world;
 
     private int _vao;
 
@@ -55,8 +56,8 @@ public class AppWindow : GameWindow
         _raycaster = new Raycaster(ClientSize.X, ClientSize.Y);
 
         // Generate voxels!
-        var voxelWorld = new Brickmap.World(worldDims, Vector3i.One * 8, (uint) Math.Pow(256, 3));
-        voxelWorld.Generate(2, 0.005f, "Simplex", 0.5f, 1, 2f);
+        _world = new Brickmap.World(worldDims, Vector3i.One * 8, (uint) Math.Pow(256, 3));
+        _world.Generate(2, 0.005f, "Simplex", 0.5f, 1, 2f);
 
         _shader = new ShaderProgram(new Dictionary<string, ShaderType>
         {
@@ -94,6 +95,7 @@ public class AppWindow : GameWindow
     {
         base.OnUpdateFrame(args);
 
+        _world.ProcessLoadQueue();
         _uiManager.Update(this, (float) args.Time);
 
         var io = ImGui.GetIO();

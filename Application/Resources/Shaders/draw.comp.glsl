@@ -21,6 +21,14 @@ layout (std430, binding = 2) buffer Indices {
     uint chunkIndices[];
 };
 
+layout (std430, binding = 3) buffer LoadQueue{
+    uint loadQueueCount;
+    uint loadQueueMaxCount;
+    uint p1;
+    uint p2;
+    ivec4 loadQueue[];
+};
+
 layout (binding = 0) uniform Camera {
     mat4 iProj;
     mat4 iView;
@@ -145,6 +153,27 @@ bool TraverseWorld(vec3 rayPos, vec3 rayDir, out HitInfo hitInfo) {
         uint rawChunkIndex = chunkIndices[indicesIndex];
         uint loadState = (rawChunkIndex >> 28u) & 0xFu;
         if (loadState == 1u) {
+            // Only mark the chunk for loading if the load queue has space
+            if (loadQueueCount < loadQueueMaxCount) {
+                uint old = atomicOr(chunkIndices[indicesIndex], (2u << 28u));
+                if (((old >> 29u) & 0x1u) == 0) {
+                    const uint loadIndex = atomicAdd(loadQueueCount, 1u);
+                    if (loadIndex < loadQueueMaxCount) {
+                        loadQueue[loadIndex] = ivec4(mapPos, 1);
+                    } else {
+                        atomicXor(chunkIndices[indicesIndex], (2u << 28u));
+                    }
+                }
+            }
+
+            float d = length(vec3(mask) * (sideDist - deltaDist));
+            uint col = rawChunkIndex & 0x00FFFFFFu;
+            vec4 color = vec4(vec3(col >> 16u, (col >> 8u) & 0xFFu, col & 0xFFu), 1.0);
+            color.rgb /= 255;
+            hitInfo = HitInfo(true, mapPos * 8.0, color, mask, tmin + d * 8);
+            break;
+        }
+        else if (loadState == 4u) {
             // What's our world position?
             float chunkDistance = length(vec3(mask) * (sideDist - deltaDist));
             chunkDistance += 0.0001;// TODO: Find a better way to fix the fpp artifacts!
@@ -158,7 +187,7 @@ bool TraverseWorld(vec3 rayPos, vec3 rayDir, out HitInfo hitInfo) {
                 break;
             }
         }
-        
+
         if (currentRayDepth >= maxRayDepth) {
             break;
         }

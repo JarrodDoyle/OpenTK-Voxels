@@ -24,6 +24,7 @@ public class World
     private readonly List<Brick> _brickPool;
     private BufferObject _indicesBuffer;
     private BufferObject _brickPoolBuffer;
+    private BufferObject _brickLoadQueueBuffer;
     private BufferObject _worldConfig;
 
     public World(Vector3i gridDimensions, Vector3i mapDimensions, uint brickPoolSize)
@@ -71,6 +72,21 @@ public class World
             Index = 2,
             Offset = 0,
         });
+
+        // Allocate the Load Queue SSBO
+        // TODO: Don't hardcode the load queue size!
+        var loadQueueMaxCount = 1024;
+        _brickLoadQueueBuffer = new BufferObject(new BufferObjectSettings
+        {
+            Size = 4 * sizeof(uint) + loadQueueMaxCount * Vector4i.SizeInBytes,
+            Data = IntPtr.Zero,
+            StorageFlags = BufferStorageFlags.DynamicStorageBit,
+            RangeTarget = BufferRangeTarget.ShaderStorageBuffer,
+            Index = 3,
+            Offset = 0,
+        });
+        _brickLoadQueueBuffer.UploadData(0, sizeof(uint), 0u);
+        _brickLoadQueueBuffer.UploadData(sizeof(uint), sizeof(uint), loadQueueMaxCount);
     }
 
     public void Generate(int seed, float frequency, string generatorType, float gain, int octaves, float lacunarity)
@@ -89,15 +105,15 @@ public class World
             GenerateMap(x, y, z, generator, seed, frequency);
 
         // Upload all the non-empty bricks
-        var bricksArr = _brickPool.ToArray();
-        var offset = 0;
-        foreach (var brick in bricksArr)
-        {
-            var brickSize = brick.Data.Length * sizeof(uint);
-            _brickPoolBuffer.UploadData(offset, brickSize, brick.Data);
-            offset += brickSize;
-            LoadedBricks++;
-        }
+        // var bricksArr = _brickPool.ToArray();
+        // var offset = 0;
+        // foreach (var brick in bricksArr)
+        // {
+        //     var brickSize = brick.Data.Length * sizeof(uint);
+        //     _brickPoolBuffer.UploadData(offset, brickSize, brick.Data);
+        //     offset += brickSize;
+        //     LoadedBricks++;
+        // }
 
         _indicesBuffer.UploadData(0, _indices.Length * sizeof(uint), _indices);
 
@@ -140,5 +156,46 @@ public class World
             _indices[gridIndex] = (uint) _brickPool.Count | (1u << 28);
             _brickPool.Add(brick);
         }
+    }
+
+    public void ProcessLoadQueue()
+    {
+        // Console.WriteLine($"Loaded: {LoadedBricks}, MaxLoaded: {_brickPoolSize}");
+        
+        // Get loadQueueCount
+        _brickLoadQueueBuffer.DownloadData(0, sizeof(uint), out uint loadCount);
+        if (loadCount == 0) return;
+        
+        // Get loadQueue (up to length of loadQueueCount)
+        // TODO: Don't hardcode the max!
+        var trueLoadCount = Math.Min(loadCount, 1024);
+        var loadPositions = new Vector4i[loadCount];
+        _brickLoadQueueBuffer.DownloadData(4 * sizeof(uint), (int) (trueLoadCount * Vector4i.SizeInBytes), loadPositions);
+
+        // Reset loadCount
+        _brickLoadQueueBuffer.UploadData(0, sizeof(uint), 0u);
+
+        // Upload the requested bricks and update their index
+        var bricksArr = _brickPool.ToArray();
+        foreach (var pos in loadPositions)
+        {
+            // Get the CPU brick index + brick
+            var indicesIndex = pos.X + pos.Y * GridDimensions.X + pos.Z * GridDimensions.X * GridDimensions.Y;
+            var rawIndex = _indices[indicesIndex];
+            var index = rawIndex & 0x0FFFFFFFu;
+            var brick = bricksArr[index];
+
+            // Update the GPU brick index
+            var gpuIndex = LoadedBricks | (4u << 28);
+            _indicesBuffer.UploadData(indicesIndex * sizeof(uint), sizeof(uint), gpuIndex);
+
+            // Upload the brick data to GPU
+            // TODO: probably shouldn't calculate bricksize here, have it as a class property
+            var brickSize = brick.Data.Length * sizeof(uint);
+            _brickPoolBuffer.UploadData((int) (LoadedBricks * brickSize), brickSize, brick.Data);
+            LoadedBricks++;
+        }
+        
+        Console.WriteLine(trueLoadCount);
     }
 }
