@@ -35,6 +35,17 @@ public class BufferObject :IDisposable
     {
         GL.NamedBufferSubData(_id, (IntPtr)offset, size, data);
     }
+    
+    public void DownloadData<T>(int offset, int size, out T data) where T : struct
+    {
+        data = new T();
+        GL.GetNamedBufferSubData(_id, (IntPtr)offset, size, ref data);
+    }
+    
+    public void DownloadData<T>(int offset, int size, T[] data) where T : struct
+    {
+        GL.GetNamedBufferSubData(_id, (IntPtr)offset, size, data);
+    }
 
     public void Dispose()
     {
