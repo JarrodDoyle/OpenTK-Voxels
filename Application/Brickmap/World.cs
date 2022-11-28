@@ -104,12 +104,12 @@ public class World
         _brickLoadQueueBuffer.UploadData(sizeof(uint), sizeof(uint), _maxLoadQueueCount);
     }
 
-    private void GenerateMap(int gridX, int gridY, int gridZ, FastNoise generator, int seed, float frequency)
+    private void GenerateMap(int gridX, int gridY, int gridZ, FastNoise generator, int seed, float frequency,
+        float[] noiseData)
     {
         // TODO: Multithread this!
         // Generate noise values
-        var numVoxels = MapDimensions.X * MapDimensions.Y * MapDimensions.Z;
-        var noiseData = new float[numVoxels];
+        var numVoxels = noiseData.Length;
         generator.GenUniformGrid3D(noiseData, gridX * MapDimensions.X, gridY * MapDimensions.Y, gridZ * MapDimensions.Z,
             MapDimensions.X, MapDimensions.Y, MapDimensions.Z, frequency, seed);
 
@@ -158,13 +158,14 @@ public class World
         // Reset loadCount
         _brickLoadQueueBuffer.UploadData(0, sizeof(uint), 0u);
 
-        // Generate the requested bricks
-        foreach (var pos in loadPositions)
-            GenerateMap(pos.X, pos.Y, pos.Z, _generator, _seed, _frequency);
-
         // Upload the requested bricks and update their index
+        // TODO: Verify that this isn't causing duplicate generations of bricks
+        var noiseData = new float[MapDimensions.X * MapDimensions.Y * MapDimensions.Z];
         foreach (var pos in loadPositions)
         {
+            // Generate the requested brick
+            GenerateMap(pos.X, pos.Y, pos.Z, _generator, _seed, _frequency, noiseData);
+
             // Get the CPU brick index + brick
             var indicesIndex = pos.X + pos.Y * GridDimensions.X + pos.Z * GridDimensions.X * GridDimensions.Y;
             var rawIndex = _indices[indicesIndex];
@@ -175,7 +176,7 @@ public class World
             }
 
             var index = rawIndex & 0x0FFFFFFFu;
-            var brick = _brickPool[(int)index];
+            var brick = _brickPool[(int) index];
 
             // Update the GPU brick index
             var gpuIndex = LoadedBricks | (4u << 28);
