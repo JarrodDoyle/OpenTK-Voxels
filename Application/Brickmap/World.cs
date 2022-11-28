@@ -163,7 +163,6 @@ public class World
             GenerateMap(pos.X, pos.Y, pos.Z, _generator, _seed, _frequency);
 
         // Upload the requested bricks and update their index
-        var bricksArr = _brickPool.ToArray();
         foreach (var pos in loadPositions)
         {
             // Get the CPU brick index + brick
@@ -176,7 +175,7 @@ public class World
             }
 
             var index = rawIndex & 0x0FFFFFFFu;
-            var brick = bricksArr[index];
+            var brick = _brickPool[(int)index];
 
             // Update the GPU brick index
             var gpuIndex = LoadedBricks | (4u << 28);
